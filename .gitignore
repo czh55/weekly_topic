@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Runtime / local work
+data/history.json
+_work/
+.daily/
+
+# Large media (keep published assets under docs/)
+*.m4a
+*.wav
+*.flac
+*.webm
+*.mp4
+*.mkv
+*.mp3
+!docs/assets/**/*

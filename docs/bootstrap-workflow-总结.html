@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>每周主题工作流 · 启动周</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .article { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    .article h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.15; margin: 12px 0 18px; }
+    .meta { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    .article h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 32px 0 12px; color: var(--accent); }
+    .article p, .article li { color: var(--text-secondary); }
+    .article ul { padding-left: 1.2em; margin: 10px 0; }
+    .article li { margin: 6px 0; }
+    .back { display: inline-flex; margin-bottom: 24px; color: var(--accent); font-size: 14px; }
+    .callout {
+      margin: 24px 0;
+      padding: 16px 18px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 0 12px 12px 0;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <article class="article">
+    <a class="back" href="./">← 返回每周主题墙</a>
+    <div class="meta">2026-W42 · 2026-10-13 · 启动周</div>
+    <h1>每周主题工作流 · 启动周</h1>
+    <p class="callout">目标不是「多读一点」，而是每周用一个明确主题把自己拽完闭环：选题 → 吸收 → 双轨产出 → 上墙。</p>
+
+    <h2>一、为什么要「每周一题」</h2>
+    <ul>
+      <li>日更项目适合碎片输入；周主题适合形成可复用的判断框架。</li>
+      <li>公开上墙制造轻微外部约束，减少半途而废。</li>
+      <li>双轨产出强制区分「纪实理解」与「结构提炼」。</li>
+    </ul>
+
+    <h2>二、标准一周节奏</h2>
+    <ul>
+      <li><strong>周一</strong>：定主题 + 写一句话成功标准（本周结束时能回答什么）。</li>
+      <li><strong>周二至周四</strong>：主材料精读 / 实践，只收集能支撑结论的证据。</li>
+      <li><strong>周五</strong>：写 HTML 总结（叙事、证据、边界）。</li>
+      <li><strong>周末</strong>：画 SVG 知识图（关系、对比、行动清单）并发布。</li>
+    </ul>
+
+    <h2>三、双轨产物约定（对齐 video-notes）</h2>
+    <ul>
+      <li><code>{slug}-总结.html</code>：可阅读的完整总结，偏纪实与推理过程。</li>
+      <li><code>{slug}-知识图.svg</code>：可滚动长图，偏结构、边界与行动。</li>
+      <li>在 <code>docs/index.json</code> 增加一条周条目，首页自动出现。</li>
+    </ul>
+
+    <h2>四、本周验收</h2>
+    <ul>
+      <li>仓库骨架可用，本地能预览首页。</li>
+      <li>GitHub Pages 指向 <code>docs/</code> 或 Actions 部署成功。</li>
+      <li>下一周可以直接按模板追加主题，不必再搭脚手架。</li>
+    </ul>
+  </article>
+</body>
+</html>

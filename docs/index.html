@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>每周主题 · Weekly Topic</title>
+  <meta name="description" content="一周一个特定主题，牵引完成学习总结。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero wrap">
+    <div class="hero-kicker">Weekly Topic Wall</div>
+    <h1>每周主题</h1>
+    <p>每周牵引自己完成一个特定主题的学习总结。双轨产出：HTML 精读总结 + SVG 知识脉络图。</p>
+    <div class="stats" aria-label="统计">
+      <div class="stat">
+        <div class="stat-num" id="statWeeks">0</div>
+        <div class="stat-label">已完成周次</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statDual">0</div>
+        <div class="stat-label">双轨齐备</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="statLatest">—</div>
+        <div class="stat-label">最近一周</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="toolbar">
+      <input id="searchInput" class="search" type="search" placeholder="搜索主题 / 摘要 / 标签…" autocomplete="off" />
+      <div id="tagFilters" class="tag-filters" aria-label="标签筛选"></div>
+    </div>
+    <section id="timeline" class="timeline" aria-live="polite"></section>
+  </main>
+
+  <footer class="wrap">
+    <span>结构对齐 video-notes · 由 docs/ 发布到 GitHub Pages</span>
+    <span>
+      <a href="https://chenzhiheng.cn/daily-hub/">Daily Hub</a>
+      ·
+      <a href="https://chenzhiheng.cn/video-notes/">Video Notes</a>
+    </span>
+  </footer>
+
+  <script>
+    (function () {
+      var allData = [];
+      var activeTag = null;
+      var $ = function (id) { return document.getElementById(id); };
+
+      function escapeHtml(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function weekLabel(item) {
+        return item.week || item.date || '—';
+      }
+
+      function updateStats(items) {
+        $('statWeeks').textContent = String(items.length);
+        var dual = 0;
+        items.forEach(function (item) {
+          var o = item.outputs || {};
+          if (o.html && o.svg) dual++;
+        });
+        $('statDual').textContent = String(dual);
+        var dates = items.map(function (i) { return i.date || ''; }).filter(Boolean).sort();
+        $('statLatest').textContent = dates.length ? dates[dates.length - 1].slice(5) : '—';
+      }
+
+      function collectTags(items) {
+        var map = {};
+        items.forEach(function (item) {
+          (item.tags || []).forEach(function (t) {
+            map[t] = (map[t] || 0) + 1;
+          });
+        });
+        return Object.keys(map).sort(function (a, b) {
+          return map[b] - map[a] || a.localeCompare(b, 'zh');
+        });
+      }
+
+      function renderTags(items) {
+        var tags = collectTags(items);
+        var root = $('tagFilters');
+        root.innerHTML = '';
+        var allBtn = document.createElement('button');
+        allBtn.type = 'button';
+        allBtn.className = 'tag-chip' + (activeTag ? '' : ' active');
+        allBtn.textContent = '全部';
+        allBtn.addEventListener('click', function () {
+          activeTag = null;
+          render();
+        });
+        root.appendChild(allBtn);
+        tags.slice(0, 12).forEach(function (tag) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'tag-chip' + (activeTag === tag ? ' active' : '');
+          btn.textContent = tag;
+          btn.addEventListener('click', function () {
+            activeTag = activeTag === tag ? null : tag;
+            render();
+          });
+          root.appendChild(btn);
+        });
+      }
+
+      function filtered() {
+        var q = ($('searchInput').value || '').trim().toLowerCase();
+        return allData.filter(function (item) {
+          if (activeTag && !(item.tags || []).includes(activeTag)) return false;
+          if (!q) return true;
+          var hay = [item.title, item.summary, item.week, item.slug]
+            .concat(item.tags || [])
+            .join(' ')
+            .toLowerCase();
+          return hay.indexOf(q) !== -1;
+        });
+      }
+
+      function renderCard(item) {
+        var o = item.outputs || {};
+        var tags = (item.tags || []).map(function (t) {
+          return '<span>' + escapeHtml(t) + '</span>';
+        }).join('');
+        var links = '';
+        if (o.html) {
+          links += '<a class="btn primary" href="' + encodeURI(o.html) + '">阅读总结</a>';
+        }
+        if (o.svg) {
+          links += '<a class="btn" href="' + encodeURI(o.svg) + '" target="_blank" rel="noopener">知识图</a>';
+        }
+        if (!links) {
+          links = '<span class="btn">尚未产出</span>';
+        }
+        return [
+          '<article class="week-card">',
+          '  <div class="week-meta">',
+          '    <span class="week-id">' + escapeHtml(weekLabel(item)) + '</span>',
+          '    <div>' + escapeHtml(item.date || '') + '</div>',
+          '  </div>',
+          '  <div>',
+          '    <h2 class="week-title">' + escapeHtml(item.title || item.slug || '未命名主题') + '</h2>',
+          '    <p class="week-summary">' + escapeHtml(item.summary || '') + '</p>',
+          tags ? '    <div class="week-tags">' + tags + '</div>' : '',
+          '    <div class="week-links">' + links + '</div>',
+          '  </div>',
+          '</article>'
+        ].join('\n');
+      }
+
+      function render() {
+        var items = filtered().slice().sort(function (a, b) {
+          return String(b.date || '').localeCompare(String(a.date || ''));
+        });
+        updateStats(allData);
+        renderTags(allData);
+        var root = $('timeline');
+        if (!items.length) {
+          root.innerHTML = '<div class="empty">还没有匹配的周主题。新增条目到 docs/index.json 即可出现在这里。</div>';
+          return;
+        }
+        root.innerHTML = items.map(renderCard).join('');
+      }
+
+      async function loadData() {
+        try {
+          var resp = await fetch('index.json');
+          if (!resp.ok) throw new Error('bad status');
+          allData = await resp.json();
+          if (!Array.isArray(allData)) allData = [];
+        } catch (e) {
+          allData = [];
+        }
+        render();
+      }
+
+      var timer = null;
+      $('searchInput').addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(render, 180);
+      });
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>
