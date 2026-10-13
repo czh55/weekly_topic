@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>区块链设计精髓 · 图解</title>
+<style>
+:root{--bg:#0f1420;--card:#161d2e;--line:#26314a;--tx:#e6edf7;--dim:#8b9bb4;
+--red:#ff5d6c;--blue:#4cc4ff;--grn:#3ddc97;--yel:#ffc857;--pur:#b07cff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);line-height:1.65;
+font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif;padding:28px 16px 60px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:1.7rem;text-align:center;letter-spacing:.02em}
+h1 small{display:block;font-size:.82rem;color:var(--dim);font-weight:400;margin-top:6px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;
+padding:20px 22px;margin:22px 0}
+.sec>h2{font-size:1.12rem;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.n{flex:none;width:26px;height:26px;border-radius:8px;background:var(--red);color:#fff;
+font-size:.82rem;display:grid;place-items:center;font-weight:700}
+.tag{font-size:.72rem;color:var(--dim);margin-bottom:14px;padding-left:36px}
+svg{display:block;width:100%;height:auto;margin:6px 0 14px}
+ul{list-style:none}
+li{padding-left:18px;position:relative;font-size:.93rem;margin:5px 0}
+li:before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;
+border-radius:50%;background:var(--blue)}
+li b{color:var(--yel)}
+.pin{border-left:3px solid var(--grn);background:#12241d;padding:9px 14px;
+border-radius:0 8px 8px 0;margin-top:12px;font-size:.92rem}
+.pin.bad{border-color:var(--red);background:#241417}
+.pin i{font-style:normal;font-weight:700;color:var(--grn);margin-right:6px}
+.pin.bad i{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:.8rem}
+td.x{color:var(--red);white-space:nowrap;font-weight:600}
+td.o{color:var(--grn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:12px;margin-top:6px}
+.c{background:#101725;border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.c .k{font-size:.72rem;color:var(--pur);font-weight:700;letter-spacing:.04em}
+.c .t{font-size:.96rem;font-weight:700;margin:3px 0 5px}
+.c .d{font-size:.8rem;color:var(--dim);line-height:1.55}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+text{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.ft{text-align:center;color:var(--dim);font-size:.76rem;margin-top:30px}
+.hero{background:linear-gradient(135deg,#1a2338,#141b2b);border:1px solid var(--line);
+border-radius:14px;padding:18px;margin:20px 0}
+.back{display:inline-block;margin-bottom:14px;font-size:.86rem;color:var(--blue);text-decoration:none}
+.back:hover{text-decoration:underline}
+</style>
+</head>
+<body><div class="wrap">
+
+<a class="back" href="./">← 返回每周主题墙</a>
+<h1>区块链设计精髓<small>9 张图 · 抓住关键 · 比特币</small></h1>
+
+<!-- 总览 -->
+<div class="hero">
+<svg viewBox="0 0 840 158">
+<text x="420" y="16" fill="#8b9bb4" font-size="11" text-anchor="middle">四根支柱，缺一不可</text>
+<g font-size="11.5">
+<rect x="18" y="30" width="188" height="110" rx="10" fill="#101725" stroke="#ff5d6c"/>
+<text x="112" y="53" fill="#ff5d6c" text-anchor="middle" font-size="13" font-weight="700">链式哈希</text>
+<text x="112" y="76" fill="#e6edf7" text-anchor="middle">改一个字</text>
+<text x="112" y="94" fill="#e6edf7" text-anchor="middle">后面全废</text>
+<text x="112" y="122" fill="#8b9bb4" text-anchor="middle" font-size="10">→ 历史不可改</text>
+
+<rect x="222" y="30" width="188" height="110" rx="10" fill="#101725" stroke="#ffc857"/>
+<text x="316" y="53" fill="#ffc857" text-anchor="middle" font-size="13" font-weight="700">工作量证明</text>
+<text x="316" y="76" fill="#e6edf7" text-anchor="middle">找极难</text>
+<text x="316" y="94" fill="#e6edf7" text-anchor="middle">验极易</text>
+<text x="316" y="122" fill="#8b9bb4" text-anchor="middle" font-size="10">→ 人人可当裁判</text>
+
+<rect x="426" y="30" width="188" height="110" rx="10" fill="#101725" stroke="#3ddc97"/>
+<text x="520" y="53" fill="#3ddc97" text-anchor="middle" font-size="13" font-weight="700">数字签名</text>
+<text x="520" y="76" fill="#e6edf7" text-anchor="middle">有公钥能验</text>
+<text x="520" y="94" fill="#e6edf7" text-anchor="middle">没私钥不能签</text>
+<text x="520" y="122" fill="#8b9bb4" text-anchor="middle" font-size="10">→ 钱偷不走</text>
+
+<rect x="630" y="30" width="192" height="110" rx="10" fill="#101725" stroke="#4cc4ff"/>
+<text x="726" y="53" fill="#4cc4ff" text-anchor="middle" font-size="13" font-weight="700">负反馈</text>
+<text x="726" y="76" fill="#e6edf7" text-anchor="middle">快了加难度</text>
+<text x="726" y="94" fill="#e6edf7" text-anchor="middle">慢了减难度</text>
+<text x="726" y="122" fill="#8b9bb4" text-anchor="middle" font-size="10">→ 无人管也稳</text>
+</g>
+</svg>
+</div>
+
+<!-- 1 链 -->
+<div class="sec">
+<h2><span class="n">1</span>链：改一个字，后面全废</h2>
+<div class="tag">和 Git 同一套骨架：每块都锁着前一块的指纹</div>
+<svg viewBox="0 0 840 218">
+<g font-size="11">
+<text x="12" y="14" fill="#3ddc97" font-size="11.5">正常链</text>
+<g>
+<rect x="12" y="24" width="150" height="62" rx="8" fill="#101725" stroke="#3ddc97"/>
+<text x="24" y="43" fill="#8b9bb4">#100</text>
+<text x="24" y="61" fill="#e6edf7">prev: a3f1</text>
+<text x="24" y="78" fill="#3ddc97">hash: 7b2c</text>
+</g>
+<path d="M166 55 H196" stroke="#3ddc97" stroke-width="2" marker-end="url(#g)"/>
+<g>
+<rect x="200" y="24" width="150" height="62" rx="8" fill="#101725" stroke="#3ddc97"/>
+<text x="212" y="43" fill="#8b9bb4">#101</text>
+<text x="212" y="61" fill="#e6edf7">prev: 7b2c</text>
+<text x="212" y="78" fill="#3ddc97">hash: e90d</text>
+</g>
+<path d="M354 55 H384" stroke="#3ddc97" stroke-width="2" marker-end="url(#g)"/>
+<g>
+<rect x="388" y="24" width="150" height="62" rx="8" fill="#101725" stroke="#3ddc97"/>
+<text x="400" y="43" fill="#8b9bb4">#102</text>
+<text x="400" y="61" fill="#e6edf7">prev: e90d</text>
+<text x="400" y="78" fill="#3ddc97">hash: 44a8</text>
+</g>
+<path d="M542 55 H572" stroke="#3ddc97" stroke-width="2" marker-end="url(#g)"/>
+<text x="580" y="60" fill="#3ddc97" font-size="13">✓ 环环相扣</text>
+
+<text x="12" y="120" fill="#ff5d6c" font-size="11.5">篡改 #100 之后</text>
+<g>
+<rect x="12" y="130" width="150" height="62" rx="8" fill="#241417" stroke="#ff5d6c"/>
+<text x="24" y="149" fill="#8b9bb4">#100</text>
+<text x="24" y="167" fill="#ffc857">金额被改</text>
+<text x="24" y="184" fill="#ff5d6c">hash: 7b2c→c15e</text>
+</g>
+<path d="M166 161 H196" stroke="#ff5d6c" stroke-width="2" marker-end="url(#r)"/>
+<g>
+<rect x="200" y="130" width="150" height="62" rx="8" fill="#241417" stroke="#ff5d6c"/>
+<text x="212" y="149" fill="#8b9bb4">#101</text>
+<text x="212" y="167" fill="#ff5d6c">prev: 7b2c ✗</text>
+<text x="212" y="184" fill="#ff5d6c">对不上，作废</text>
+</g>
+<path d="M354 161 H384" stroke="#ff5d6c" stroke-width="2" marker-end="url(#r)"/>
+<g>
+<rect x="388" y="130" width="150" height="62" rx="8" fill="#241417" stroke="#ff5d6c"/>
+<text x="400" y="149" fill="#8b9bb4">#102</text>
+<text x="400" y="167" fill="#ff5d6c">连带作废</text>
+<text x="400" y="184" fill="#ff5d6c">…一直到链尾</text>
+</g>
+<path d="M542 161 H572" stroke="#ff5d6c" stroke-width="2" marker-end="url(#r)"/>
+<text x="580" y="158" fill="#ff5d6c" font-size="13">✗ 全部要重挖</text>
+<text x="580" y="176" fill="#8b9bb4" font-size="10">而诚实链还在变长</text>
+</g>
+<defs>
+<marker id="g" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#3ddc97"/></marker>
+<marker id="r" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#ff5d6c"/></marker>
+</defs>
+</svg>
+<ul>
+<li>Git 也是这个结构，但 Git 靠 <b>push 权限</b>护着；区块链没有管理员，靠 <b>重做工作量</b>护着</li>
+<li>改写 6 个块 ≈ <b>2.16×10²⁴ 次哈希</b>，还必须比全网其余算力更快</li>
+</ul>
+</div>
+
+<!-- 2 挖矿 -->
+<div class="sec">
+<h2><span class="n">2</span>挖矿：不是"算出"，是"摇出"</h2>
+<div class="tag">在 0 ~ 2²⁵⁶ 这条数轴上，只有最左边一丝缝算中奖</div>
+<svg viewBox="0 0 840 190">
+<g font-size="11">
+<rect x="40" y="86" width="760" height="20" rx="4" fill="#101725" stroke="#26314a"/>
+<rect x="40" y="86" width="14" height="20" rx="3" fill="#3ddc97" opacity=".85"/>
+<text x="40" y="128" fill="#8b9bb4">0</text>
+<text x="47" y="80" fill="#3ddc97" font-size="10.5" text-anchor="middle">target</text>
+<path d="M54 96 L54 78" stroke="#3ddc97"/>
+<text x="800" y="128" fill="#8b9bb4" text-anchor="end">2²⁵⁶</text>
+<text x="70" y="146" fill="#3ddc97" font-size="10.5">← 中奖区（hash &lt; target）</text>
+<text x="430" y="146" fill="#8b9bb4" font-size="10.5">不合格区，占 99.99999998%</text>
+
+<text x="40" y="30" fill="#8b9bb4">矿工不停换 nonce，每次得到一个随机落点：</text>
+<circle cx="318" cy="60" r="4" fill="#ff5d6c"/><circle cx="512" cy="60" r="4" fill="#ff5d6c"/>
+<circle cx="196" cy="60" r="4" fill="#ff5d6c"/><circle cx="694" cy="60" r="4" fill="#ff5d6c"/>
+<circle cx="430" cy="60" r="4" fill="#ff5d6c"/><circle cx="606" cy="60" r="4" fill="#ff5d6c"/>
+<circle cx="252" cy="60" r="4" fill="#ff5d6c"/><circle cx="762" cy="60" r="4" fill="#ff5d6c"/>
+<circle cx="47" cy="60" r="6" fill="#3ddc97"/>
+<path d="M47 66 L47 84" stroke="#3ddc97" stroke-width="2"/>
+<text x="60" y="52" fill="#3ddc97" font-size="11.5" font-weight="700">第 43 亿次 ✓ 中奖</text>
+
+<text x="40" y="176" fill="#e6edf7" font-size="11.5">创世块 target = </text>
+<text x="152" y="176" fill="#ffc857" font-size="11.5">00000000ffff0000…0000</text>
+<text x="410" y="176" fill="#8b9bb4" font-size="10.5">← 8 个前导零 → 平均试 4.3×10⁹ 次</text>
+</g>
+</svg>
+<ul>
+<li>规则是精确的整数比较 <b>hash &lt; target</b>；"找几个前导零"只是近似说法</li>
+<li>target <b>越小越难</b>。难度上调 = target 下调（方向极易记反）</li>
+<li>哈希不可预测、无中间状态可缓存，所以<b>只能穷举</b>，没有捷径</li>
+</ul>
+<div class="pin"><i>实测</i>手工拼出 80 字节创世块头，两次 SHA256 得到 <span class="mono">000000000019d668…0a8ce26f</span>，与公认哈希完全一致。coinbase 里还埋着中本聪那句 <span class="mono">"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"</span>。</div>
+</div>
+
+<!-- 3 不对称 -->
+<div class="sec">
+<h2><span class="n">3</span>不对称：找难 · 验易</h2>
+<div class="tag">整个去中心化的地基就压在这个倍数上</div>
+<svg viewBox="0 0 840 168">
+<g font-size="11">
+<text x="12" y="20" fill="#8b9bb4">本机实测（找到一个合格哈希 vs 验证它）</text>
+
+<text x="12" y="50" fill="#e6edf7">4 个零</text>
+<rect x="82" y="39" width="120" height="14" rx="3" fill="#ff5d6c"/>
+<text x="210" y="50" fill="#ff5d6c">46.1 ms</text>
+<rect x="292" y="39" width="3" height="14" rx="1.5" fill="#3ddc97"/>
+<text x="303" y="50" fill="#3ddc97">0.73 µs</text>
+<text x="700" y="50" fill="#ffc857" text-anchor="end">6.3 万倍</text>
+
+<text x="12" y="82" fill="#e6edf7">5 个零</text>
+<rect x="82" y="71" width="400" height="14" rx="3" fill="#ff5d6c"/>
+<text x="490" y="82" fill="#ff5d6c">1,217 ms</text>
+<rect x="580" y="71" width="3" height="14" rx="1.5" fill="#3ddc97"/>
+<text x="591" y="82" fill="#3ddc97">0.78 µs</text>
+<text x="700" y="82" fill="#ffc857" text-anchor="end">155 万倍</text>
+
+<text x="12" y="114" fill="#e6edf7">6 个零</text>
+<rect x="82" y="103" width="620" height="14" rx="3" fill="#ff5d6c"/>
+<text x="710" y="114" fill="#ff5d6c">3,274 ms</text>
+<rect x="756" y="103" width="3" height="14" rx="1.5" fill="#3ddc97"/>
+<text x="700" y="132" fill="#ffc857" text-anchor="end">473 万倍</text>
+
+<line x1="12" y1="144" x2="828" y2="144" stroke="#26314a"/>
+<text x="12" y="160" fill="#e6edf7" font-size="11.5">真实网络：<tspan fill="#ff5d6c">全网 6×10²⁰ 次/秒 干 10 分钟</tspan>  →  <tspan fill="#3ddc97">任意手机算 1 次，微秒级</tspan></text>
+</g>
+</svg>
+<ul>
+<li>生产权很贵，<b>审核权几乎免费</b> → 不必信任矿工，自己验一遍就行</li>
+<li>这条不等式一旦被打破（例如验证也变贵），去中心化立刻不成立</li>
+</ul>
+</div>
+
+<!-- 4 节奏 -->
+<div class="sec">
+<h2><span class="n">4</span>节奏：一个跑了 17 年的负反馈回路</h2>
+<div class="tag">没有管理员、没有服务器，靠一条除法把节奏锁在 10 分钟</div>
+<svg viewBox="0 0 840 208">
+<g font-size="11">
+<text x="14" y="16" fill="#8b9bb4">控制框图（P 控制器，增益 = 1）</text>
+<rect x="14" y="34" width="104" height="46" rx="8" fill="#101725" stroke="#4cc4ff"/>
+<text x="66" y="53" fill="#4cc4ff" text-anchor="middle">目标</text>
+<text x="66" y="70" fill="#e6edf7" text-anchor="middle">10 分钟/块</text>
+<path d="M122 57 H156" stroke="#4cc4ff" stroke-width="2" marker-end="url(#b)"/>
+<circle cx="172" cy="57" r="15" fill="#101725" stroke="#4cc4ff"/>
+<text x="172" y="62" fill="#4cc4ff" text-anchor="middle" font-size="13">÷</text>
+<path d="M188 57 H222" stroke="#4cc4ff" stroke-width="2" marker-end="url(#b)"/>
+<rect x="226" y="26" width="150" height="62" rx="8" fill="#101725" stroke="#ffc857"/>
+<text x="301" y="46" fill="#ffc857" text-anchor="middle">每 2016 块调一次</text>
+<text x="301" y="64" fill="#e6edf7" text-anchor="middle" font-size="10">target ×= 实际/期望</text>
+<text x="301" y="80" fill="#8b9bb4" text-anchor="middle" font-size="10">夹在 [¼, 4] 倍</text>
+<path d="M380 57 H414" stroke="#ffc857" stroke-width="2" marker-end="url(#y)"/>
+<rect x="418" y="26" width="150" height="62" rx="8" fill="#101725" stroke="#b07cff"/>
+<text x="493" y="46" fill="#b07cff" text-anchor="middle">全网算力</text>
+<text x="493" y="64" fill="#8b9bb4" text-anchor="middle" font-size="10">被控对象</text>
+<text x="493" y="80" fill="#8b9bb4" text-anchor="middle" font-size="10">天天在变（扰动）</text>
+<path d="M572 57 H606" stroke="#b07cff" stroke-width="2" marker-end="url(#p)"/>
+<rect x="610" y="34" width="120" height="46" rx="8" fill="#101725" stroke="#3ddc97"/>
+<text x="670" y="53" fill="#3ddc97" text-anchor="middle">实际出块</text>
+<text x="670" y="70" fill="#e6edf7" text-anchor="middle">间隔</text>
+<path d="M670 84 V116 H172 V74" stroke="#3ddc97" stroke-width="2" fill="none" marker-end="url(#g2)" stroke-dasharray="5 4"/>
+<text x="420" y="132" fill="#3ddc97" text-anchor="middle" font-size="10.5">负反馈：测到的间隔回灌到分母</text>
+
+<line x1="14" y1="150" x2="828" y2="150" stroke="#26314a"/>
+<text x="14" y="170" fill="#e6edf7" font-size="11.5">阶跃响应（2021 算力腰斩）</text>
+<text x="14" y="192" fill="#8b9bb4" font-size="10.5">算力 1.0→</text>
+<text x="96" y="192" fill="#ff5d6c" font-size="10.5">0.5：本窗口间隔飙到 20 分</text>
+<text x="290" y="192" fill="#8b9bb4" font-size="10.5">→ 下一窗口难度自动砍半 →</text>
+<text x="510" y="192" fill="#3ddc97" font-size="10.5">立刻回到 10 分（一步到位）</text>
+<text x="700" y="192" fill="#ffc857" font-size="10.5">代价：那 2016 块熬了 28 天</text>
+</g>
+<defs>
+<marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#4cc4ff"/></marker>
+<marker id="y" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#ffc857"/></marker>
+<marker id="p" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#b07cff"/></marker>
+<marker id="g2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#3ddc97"/></marker>
+</defs>
+</svg>
+<ul>
+<li><b>增益必须 = 1</b>：2016 个样本的均值本身有 ±2.2% 噪声（1/√2016），增益 &gt;1 就会拿噪声当信号，自激振荡</li>
+<li><b>夹板 [¼,4]</b> 是防"单批异常把难度一次打飞"的限幅</li>
+<li>无法消除的是<b>死时间</b>：调整只在窗口末尾发生，期间只能硬扛</li>
+</ul>
+<div class="pin bad"><i>误区</i>"平均 10 分钟" ≠ "每 10 分钟"。间隔服从指数分布且<b>无记忆</b>：中位数只有 6.95 分，13.5% 的间隔超过 20 分钟，模拟 20 万块里最长干等 <b>130 分钟</b>。已经等了 20 分钟，下一块的期望等待<b>仍然是</b> 10 分钟。</div>
+</div>
+
+<!-- 5 51% -->
+<div class="sec">
+<h2><span class="n">5</span>安全边界：50% 是悬崖，不是斜坡</h2>
+<div class="tag">赌徒破产模型：追平概率 (q/p)^z</div>
+<svg viewBox="0 0 840 262">
+<g font-size="11">
+<line x1="60" y1="40" x2="60" y2="220" stroke="#26314a"/>
+<line x1="60" y1="220" x2="500" y2="220" stroke="#26314a"/>
+<text x="52" y="44" fill="#8b9bb4" text-anchor="end">100%</text>
+<text x="52" y="136" fill="#8b9bb4" text-anchor="end">50%</text>
+<text x="52" y="224" fill="#8b9bb4" text-anchor="end">0</text>
+<text x="120" y="238" fill="#8b9bb4" text-anchor="middle">10%</text>
+<text x="240" y="238" fill="#8b9bb4" text-anchor="middle">30%</text>
+<text x="360" y="238" fill="#8b9bb4" text-anchor="middle">50%</text>
+<text x="440" y="238" fill="#8b9bb4" text-anchor="middle">60%</text>
+<text x="280" y="256" fill="#8b9bb4" text-anchor="middle" font-size="10.5">攻击者算力占比 q</text>
+<text x="16" y="130" fill="#8b9bb4" font-size="10.5" transform="rotate(-90 16 130)" text-anchor="middle">翻盘成功率</text>
+
+<path d="M60 220 L120 220 L180 220 L240 218.9 L270 215.6 L300 204.2 L330 166 L348 110 L354 78 L360 40 L500 40"
+fill="none" stroke="#ff5d6c" stroke-width="2.5"/>
+<line x1="360" y1="40" x2="360" y2="220" stroke="#ffc857" stroke-dasharray="4 4"/>
+<text x="366" y="60" fill="#ffc857" font-size="11.5" font-weight="700">50% 悬崖</text>
+<text x="366" y="78" fill="#8b9bb4" font-size="10">越过即 100%</text>
+<text x="366" y="96" fill="#8b9bb4" font-size="10">不是"概率变高"</text>
+<text x="366" y="112" fill="#8b9bb4" font-size="10">而是"必然成功"</text>
+<text x="200" y="200" fill="#ff5d6c" font-size="10.5">z = 6 个确认</text>
+
+<text x="540" y="44" fill="#8b9bb4">落后 6 个确认时的翻盘率</text>
+<g font-size="11.5">
+<text x="540" y="70" fill="#e6edf7">q=10%</text><text x="660" y="70" fill="#3ddc97">≈ 0</text>
+<text x="540" y="92" fill="#e6edf7">q=30%</text><text x="660" y="92" fill="#3ddc97">0.62%</text>
+<text x="540" y="114" fill="#e6edf7">q=40%</text><text x="660" y="114" fill="#ffc857">8.78%</text>
+<text x="540" y="136" fill="#e6edf7">q=45%</text><text x="660" y="136" fill="#ffc857">30.0%</text>
+<text x="540" y="158" fill="#e6edf7">q=49%</text><text x="660" y="158" fill="#ff5d6c">78.7%</text>
+<text x="540" y="180" fill="#e6edf7" font-weight="700">q=50%</text><text x="660" y="180" fill="#ff5d6c" font-weight="700">100%</text>
+</g>
+<text x="540" y="206" fill="#8b9bb4" font-size="10.5">49% 的赌徒终会输光；</text>
+<text x="540" y="222" fill="#8b9bb4" font-size="10.5">50% 的赌徒永不输光。</text>
+<text x="540" y="238" fill="#8b9bb4" font-size="10.5">中间没有过渡态 → 相变</text>
+</g>
+</svg>
+<ul>
+<li><b>6 个确认</b>这个惯例就是从这张表来的：攻击者 &lt;30% 时翻盘率 &lt; 0.62%</li>
+<li>越过 50% 后成功率不再是概率问题，而是<b>时间问题</b></li>
+</ul>
+<div class="pin bad"><i>误区</i>"有 51% 算力就能把别人的币转走" —— <b>不能</b>。51% 只买到<b>记账权</b>（可以让自己花过的钱回滚 = 双花），而<b>产权</b>由签名独立守卫。凭空造币同样无效：其他节点一验金额就丢弃你的块。</div>
+</div>
+
+<!-- 6 签名 -->
+<div class="sec">
+<h2><span class="n">6</span>产权：两条不同的路，撞在同一个点上</h2>
+<div class="tag">验证者手里有内容，缺的只是私钥和随机数 k</div>
+<svg viewBox="0 0 840 250">
+<g font-size="11">
+<text x="14" y="16" fill="#8b9bb4">① 钥匙的本质：走多少步 → 落在哪（单向）</text>
+<circle cx="70" cy="52" r="17" fill="#101725" stroke="#3ddc97"/>
+<text x="70" y="57" fill="#3ddc97" text-anchor="middle">起点</text>
+<path d="M92 52 H236" stroke="#3ddc97" stroke-width="2" marker-end="url(#g3)"/>
+<text x="164" y="44" fill="#3ddc97" text-anchor="middle" font-size="10.5">走 7 步（私钥 d=7）</text>
+<text x="164" y="68" fill="#8b9bb4" text-anchor="middle" font-size="10">容易</text>
+<circle cx="262" cy="52" r="22" fill="#101725" stroke="#ffc857"/>
+<text x="262" y="49" fill="#ffc857" text-anchor="middle" font-size="10">公钥</text>
+<text x="262" y="62" fill="#ffc857" text-anchor="middle" font-size="10">(3,41)</text>
+<path d="M240 78 H92" stroke="#ff5d6c" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#r3)"/>
+<text x="166" y="94" fill="#ff5d6c" text-anchor="middle" font-size="10.5">反推步数 ✗ 不可能（离散对数）</text>
+
+<text x="430" y="16" fill="#8b9bb4">站点毫无规律 →</text>
+<g font-size="10.5" fill="#e6edf7">
+<text x="430" y="38">1步 (1,43)</text><text x="530" y="38">2步 (59,61)</text><text x="632" y="38">3步 (86,41)</text><text x="734" y="38">4步 (72,26)</text>
+<text x="430" y="58">5步 (57,92)</text><text x="530" y="58">6步 (14,79)</text>
+<text x="632" y="58" fill="#ffc857">7步 (3,41)</text><text x="734" y="58">8步 (94,50)</text>
+</g>
+<text x="430" y="82" fill="#8b9bb4" font-size="10">看得见落点，推不出步数 —— 全部安全性来源</text>
+
+<line x1="14" y1="106" x2="828" y2="106" stroke="#26314a"/>
+<text x="14" y="126" fill="#8b9bb4">② 验证 = 制造一个不可能的巧合</text>
+
+<circle cx="70" cy="184" r="19" fill="#101725" stroke="#8b9bb4"/>
+<text x="70" y="189" fill="#8b9bb4" text-anchor="middle">起点</text>
+<path d="M90 172 Q300 118 508 166" fill="none" stroke="#ffc857" stroke-width="2.5" marker-end="url(#y3)"/>
+<text x="300" y="132" fill="#ffc857" text-anchor="middle" font-size="10.5">签名者：走 k=3 步（<tspan fill="#ff5d6c">用私钥</tspan>，只有他能走）</text>
+<path d="M90 196 Q300 250 508 202" fill="none" stroke="#4cc4ff" stroke-width="2.5" marker-end="url(#b3)"/>
+<text x="300" y="242" fill="#4cc4ff" text-anchor="middle" font-size="10.5">验证者：走 44 步 + 28×公钥（<tspan fill="#3ddc97">全是公开信息</tspan>）</text>
+<circle cx="530" cy="184" r="30" fill="#12241d" stroke="#3ddc97" stroke-width="2.5"/>
+<text x="530" y="180" fill="#3ddc97" text-anchor="middle" font-size="11">(86,41)</text>
+<text x="530" y="195" fill="#3ddc97" text-anchor="middle" font-size="14">✓</text>
+<text x="576" y="172" fill="#e6edf7" font-size="11.5">同一个点！</text>
+<text x="576" y="192" fill="#8b9bb4" font-size="10.5">两条完全不同的路线汇合</text>
+<text x="576" y="210" fill="#8b9bb4" font-size="10.5">只有私钥与公钥配对、且内容未改，才会汇合</text>
+</g>
+<defs>
+<marker id="g3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#3ddc97"/></marker>
+<marker id="r3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#ff5d6c"/></marker>
+<marker id="y3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#ffc857"/></marker>
+<marker id="b3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8z" fill="#4cc4ff"/></marker>
+</defs>
+</svg>
+<table>
+<tr><th style="width:30%">伪造方式</th><th>验证落点</th><th>该落的点</th><th></th></tr>
+<tr><td>真签名、真内容</td><td class="o">(86,41)</td><td>x=7 = r</td><td class="o">✓ 通过</td></tr>
+<tr><td>攻击者用自己私钥签，挂老王公钥</td><td>(16,30)</td><td>x=16 ≠ 57</td><td class="x">✗ 走岔</td></tr>
+<tr><td>真签名，但内容被偷改</td><td>(72,71)</td><td>x=72 ≠ 7</td><td class="x">✗ 走岔</td></tr>
+</table>
+<ul>
+<li>验证<b>不是"检查"，是"复现一个巧合"</b>：落点对上本身就是证明</li>
+<li>玩具跑道 79 个站点 → 蒙对 1/79；真实比特币 2²⁵⁶ 个 → 实质为零</li>
+<li>像验算除法：<b>不必知道人家怎么除的</b>，反乘一下能对上就行</li>
+</ul>
+<div class="pin bad"><i>致命坑</i>随机数 <b>k 复用两次，私钥当场被解出来</b>。链上两条签名的 r 相同就是铁证：<span class="mono">k=(z₁−z₂)/(s₁−s₂)</span>，再 <span class="mono">d=(s·k−z)/r</span>。实测反解出 k=3、d=7 完全正确。2013 年 Android 钱包、2010 年 PS3 都因此被盗。<b>私钥不必联网就能从公开签名里泄露。</b></div>
+</div>
+
+<!-- 7 总量 -->
+<div class="sec">
+<h2><span class="n">7</span>总量：2100 万不是规定，是推论</h2>
+<div class="tag">代码里只有两条规则，2100 万是它们的数学后果</div>
+<svg viewBox="0 0 840 210">
+<g font-size="11">
+<line x1="60" y1="200" x2="470" y2="200" stroke="#26314a"/>
+<line x1="60" y1="50" x2="470" y2="50" stroke="#ffc857" stroke-dasharray="5 4"/>
+<text x="478" y="54" fill="#ffc857" font-size="11.5">2100 万上限</text>
+<g fill="#4cc4ff" opacity=".8">
+<rect x="72" y="60" width="34" height="140" rx="3"/>
+<rect x="126" y="130" width="34" height="70" rx="3"/>
+<rect x="180" y="165" width="34" height="35" rx="3"/>
+<rect x="234" y="182" width="34" height="18" rx="3"/>
+<rect x="288" y="191" width="34" height="9" rx="3"/>
+<rect x="342" y="195" width="34" height="5" rx="3"/>
+<rect x="396" y="197" width="34" height="3" rx="3"/>
+</g>
+<g font-size="9.5" fill="#8b9bb4" text-anchor="middle">
+<text x="89" y="212">50</text><text x="143" y="212">25</text><text x="197" y="212">12.5</text>
+<text x="251" y="212">6.25</text><text x="305" y="212">3.1</text><text x="359" y="212">1.6</text><text x="413" y="212">…→0</text>
+</g>
+<text x="89" y="54" fill="#4cc4ff" font-size="9.5" text-anchor="middle">每块奖励 BTC</text>
+<path d="M89 125 L143 87.5 L197 68.8 L251 59.4 L305 54.8 L359 52.4 L413 51.2 L455 50.4"
+fill="none" stroke="#3ddc97" stroke-width="2.5"/>
+<circle cx="89" cy="125" r="3.5" fill="#3ddc97"/><circle cx="143" cy="87.5" r="3.5" fill="#3ddc97"/>
+<circle cx="197" cy="68.8" r="3.5" fill="#3ddc97"/><circle cx="251" cy="59.4" r="3.5" fill="#3ddc97"/>
+<text x="150" y="112" fill="#3ddc97" font-size="10.5">累计发行量（渐近，永不触顶）</text>
+<text x="60" y="26" fill="#8b9bb4">每 21 万块（约 4 年）奖励减半 →</text>
+
+<text x="540" y="80" fill="#8b9bb4" font-size="10.5">代码里只写了两条：</text>
+<text x="540" y="102" fill="#e6edf7" font-size="11">① 初始奖励 50 BTC</text>
+<text x="540" y="122" fill="#e6edf7" font-size="11">② 每 210,000 块减半</text>
+<text x="540" y="150" fill="#ffc857" font-size="11">50 × 21万 × (1+½+¼+…)</text>
+<text x="540" y="170" fill="#ffc857" font-size="11">= 50 × 21万 × 2 = <tspan font-weight="700">2100 万</tspan></text>
+<text x="540" y="194" fill="#8b9bb4" font-size="10">没有 MAX_SUPPLY 这个常量</text>
+</g>
+</svg>
+<ul>
+<li>整数除法截断使实际总量为 <b>20,999,999.9769 BTC</b>，约 2140 年后奖励归零</li>
+<li>把上限写成<b>推论而非参数</b>，就没有"改一个配置项"的攻击面</li>
+</ul>
+</div>
+
+<!-- 8 误区 -->
+<div class="sec">
+<h2><span class="n">8</span>误区速查</h2>
+<div class="tag">最容易记反、说错的六处</div>
+<table>
+<tr><th style="width:44%">常见说法</th><th>实际</th></tr>
+<tr><td class="x">hash &gt; target 就中奖</td><td class="o">方向反了，是 <b>hash &lt; target</b>；难度上调 = target 下调</td></tr>
+<tr><td class="x">矿工"计算出"区块哈希</td><td class="o">是<b>暴力穷举</b>换 nonce 碰运气，不是解出某个值</td></tr>
+<tr><td class="x">第一个算出来的矿工赢</td><td class="o">第一个<b>被网络接受</b>的赢；同时出块会临时分叉，由最长链收敛决定，输的成为孤块</td></tr>
+<tr><td class="x">平均 10 分钟 = 每 10 分钟</td><td class="o">指数分布无记忆；中位数 6.95 分，5% 超过 30 分钟</td></tr>
+<tr><td class="x">51% 算力能转走别人的币</td><td class="o">只能<b>双花自己的</b>；产权由签名独立守卫</td></tr>
+<tr><td class="x">私钥没联网就不会泄露</td><td class="o">k 复用时可从<b>公开签名</b>直接反解出私钥</td></tr>
+</table>
+</div>
+
+<!-- 9 精髓 -->
+<div class="sec">
+<h2><span class="n">9</span>精髓：8 条可迁移的设计原则</h2>
+<div class="tag">脱开"币"看，这是一套无人值守系统的工程范式</div>
+<div class="grid">
+<div class="c"><div class="k">成本结构</div><div class="t">验证 ≪ 生产</div><div class="d">找哈希 10²³ 次，验一次即可。人人可当裁判，才不需要权威。</div></div>
+<div class="c"><div class="k">激励对齐</div><div class="t">作恶成本 &gt; 收益</div><div class="d">不靠惩罚坏人，靠让作恶不划算。诚实是最优策略而非道德选择。</div></div>
+<div class="c"><div class="k">控制</div><div class="t">纯负反馈，增益 1</div><div class="d">增益不超过噪声允许的上限，否则拿噪声当信号自激振荡。</div></div>
+<div class="c"><div class="k">一致性</div><div class="t">用收敛替代协调</div><div class="d">不投票、不选举。冲突让最长链自动化解，消除通讯瓶颈。</div></div>
+<div class="c"><div class="k">信任</div><div class="t">独立验证 &gt; 信任传递</div><div class="d">每个节点自己重算全部规则，不接受"别人说这是对的"。</div></div>
+<div class="c"><div class="k">密码学</div><div class="t">单向函数做承诺</div><div class="d">正向易、逆向不可能。于是无需保管秘密也能验真假。</div></div>
+<div class="c"><div class="k">规则</div><div class="t">数学保证 &gt; 政策保证</div><div class="d">上限是数列推论、有效性是曲线方程 —— 不可被投票或命令改写。</div></div>
+<div class="c"><div class="k">容错</div><div class="t">容忍拜占庭节点</div><div class="d">假定 49% 算力恶意仍安全。不指望"让所有人变好"。</div></div>
+</div>
+<div class="pin"><i>一句话</i>比特币不假设"多数人是好人"，只假设"多数<b>算力</b>是逐利的" —— 然后把协议设计成：<b>逐利 = 守规则 = 对系统有益</b>。</div>
+</div>
+
+<p class="ft">图中数值均为本次实测：手算 commit 哈希、复原创世块 80 字节块头、实测找/验耗时、20 万块间隔模拟、难度阶跃仿真、玩具椭圆曲线签名与两种伪造</p>
+
+</div></body></html>

@@ -2,6 +2,22 @@
   {
     "week": "2026-W42",
     "date": "2026-10-13",
+    "title": "区块链设计精髓 · 比特币",
+    "summary": "用 9 张图抓住四根支柱：链式哈希、工作量证明、数字签名、负反馈；并提炼 8 条可迁移的无人值守系统设计原则。",
+    "tags": [
+      "比特币",
+      "区块链",
+      "密码学",
+      "系统设计"
+    ],
+    "slug": "blockchain-design-essentials",
+    "outputs": {
+      "html": "blockchain-design-essentials-总结.html"
+    }
+  },
+  {
+    "week": "2026-W42",
+    "date": "2026-10-13",
     "title": "每周主题工作流 · 启动周",
     "summary": "建立「一周一个主题」的牵引节奏：选题 → 精读/实践 → 双轨产出（HTML 总结 + SVG 脉络图）→ 发布到本站。",
     "tags": [
