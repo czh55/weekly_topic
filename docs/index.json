@@ -2,6 +2,23 @@
   {
     "week": "2026-W42",
     "date": "2026-10-17",
+    "title": "第 0 章 · 面向大模型的数学基础",
+    "summary": "只读了介金教材第 0 章：按依赖顺序补高数上册之后的缺口，并把 argmax、同名符号、交叉熵地板、KL 方向、FP16/BF16、softmax 减 max 这些初学者最容易认错的地方标清。后面每周一章。",
+    "tags": [
+      "大模型",
+      "数学",
+      "信息论",
+      "纠偏"
+    ],
+    "slug": "llm-math-ch0",
+    "outputs": {
+      "html": "llm-math-ch0-总结.html",
+      "svg": "llm-math-ch0-知识图.svg"
+    }
+  },
+  {
+    "week": "2026-W42",
+    "date": "2026-10-17",
     "title": "从配时分配到 NP-hard",
     "summary": "从地板配时的分配不均出发，把 P、NP、NP-hard、MILP 翻译成人话：难度来自离散选择，而整数变量零间隙时其实是白送的。",
     "tags": [

@@ -1,0 +1,124 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { buildSvg } from '/Users/chenzhiheng/Projects/video-notes/svg-auto-height.mjs';
+
+const DIR = path.dirname(fileURLToPath(import.meta.url));
+const OUT = path.resolve(DIR, '../docs/llm-math-ch0-知识图.svg');
+
+const CSS = `
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#f6f8fa;padding:40px 48px;color:#1f2328}
+h1{font-size:32px;line-height:1.3;margin-bottom:8px}
+.sub{color:#57606a;font-size:15px;margin-bottom:8px}
+.tags{margin:12px 0 20px}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:8px}
+.tag-blue{background:#ddf4ff;color:#0969da}
+.tag-green{background:#dafbe1;color:#1a7f37}
+.tag-orange{background:#fff1e5;color:#bc4c00}
+.lead{background:#fff;border:1px solid #d1d9e0;border-left:4px solid #0969da;border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:15px;line-height:1.7}
+.map{background:#fff;border:1px solid #d1d9e0;border-radius:12px;padding:18px;margin-bottom:18px}
+.diagram{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.node{background:#ddf4ff;border:1px solid #54aeff;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;color:#0969da;min-width:92px;text-align:center}
+.node small{display:block;font-weight:500;color:#57606a;margin-top:4px}
+.arrow{color:#8c959f;font-size:18px}
+.card{background:#fff;border:1px solid #d1d9e0;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.card h3{font-size:17px;margin-bottom:8px}
+.card p{font-size:14px;line-height:1.7;color:#424a53;margin:6px 0}
+.pit{background:#fff8c5;border-left:4px solid #d4a72c;padding:8px 12px;border-radius:0 8px 8px 0;margin-top:8px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{border-bottom:1px solid #d1d9e0;padding:8px 8px;text-align:left;vertical-align:top}
+th{color:#0969da}
+.conclusion{background:#1f2328;color:#f6f8fa;border-radius:12px;padding:18px 20px;margin-top:8px}
+.conclusion h2{font-size:18px;margin:14px 0 8px}
+.conclusion p,.conclusion li{font-size:14px;line-height:1.7;color:#d1d9e0}
+.conclusion ol{padding-left:1.2em}
+`;
+
+const body = `
+<h1>第 0 章数学：初学者会认错的地方</h1>
+<p class="sub">《大模型：从 Transformer 到部署》· 介金 · 本周只读这一章</p>
+<div class="tags">
+  <span class="tag tag-blue">大模型数学</span>
+  <span class="tag tag-green">纠偏</span>
+  <span class="tag tag-orange">每周一章</span>
+</div>
+<p class="lead">本文解决的核心问题是：高数上册之后，还缺哪几块，才能看懂后面章节的符号。作者按依赖顺序补丁，并把同名不同义先排雷。</p>
+<div class="map">
+  <div class="diagram">
+    <div class="node">0.1 符号<small>先解压字母</small></div>
+    <span class="arrow">→</span>
+    <div class="node">0.2 线代<small>点积=相似度</small></div>
+    <span class="arrow">+</span>
+    <div class="node">0.3 概率<small>链式法则</small></div>
+    <span class="arrow">→</span>
+    <div class="node">0.4 信息论<small>熵+KL</small></div>
+    <span class="arrow">→</span>
+    <div class="node">0.5 求导<small>预测−标签</small></div>
+    <span class="arrow">→</span>
+    <div class="node">0.6 优化<small>鞍点多于坑</small></div>
+    <span class="arrow">→</span>
+    <div class="node">0.7 数值<small>先减 max</small></div>
+  </div>
+  <p class="pit">认知纠偏：交叉熵降不完，因为里面有一份与模型无关的数据熵。训练只能消掉 KL 那一项。</p>
+</div>
+
+<div class="card">
+  <h3>符号：返回的是位置，不是高度</h3>
+  <p>在问什么：公式里这个字母到底交回什么。</p>
+  <p>关键理解：argmax 交回「谁最大」，max 交回「有多大」。对数把连乘改成连加，是为了避开小于 1 的概率乘到下溢。</p>
+  <p>怎么用：解码要词，就用 argmax；训练目标写成 log。</p>
+  <p class="pit">避坑：H、D、T、N、n、d、P/Q 在不同章换岗。L 是层数，花体 ℒ 才是损失。温度是 τ，不是 T。</p>
+</div>
+
+<div class="card">
+  <h3>线代 vs 概率：注意力贵在长度的平方</h3>
+  <table>
+    <tr><th></th><th>线性代数</th><th>概率</th><th>结论</th></tr>
+    <tr><td>在模型里干什么</td><td>词是空间中的点，点积量相似度</td><td>下一词是一个分布，整句是条件概率连乘</td><td>一个管「像不像」，一个管「有多可能」</td></tr>
+    <tr><td>形状/边界</td><td>内侧维度必须相等；(n×d)×(d×n) 得到 n×n</td><td>相邻词不独立，否则语言建模没意义</td><td>长上下文贵，是因为 O(n²d)</td></tr>
+    <tr><td>不该做什么</td><td>不要显式求逆矩阵</td><td>不要用裸连乘当训练目标</td><td>报错先查形状，下溢先取对数</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>信息论：三种距离不要当成一个数</h3>
+  <table>
+    <tr><th>量</th><th>在度量</th><th>边界</th></tr>
+    <tr><td>熵 H(P)</td><td>数据本身有多意外</td><td>与模型无关，损失的地板</td></tr>
+    <tr><td>交叉熵 H(P,Q)</td><td>用模型分布 Q 给真实数据编码有多费</td><td>训练直接最小化的就是它</td></tr>
+    <tr><td>KL(P‖Q)</td><td>Q 比 P 错在哪，且两个方向不等</td><td>前向要盖住全部，反向会缩到一个峰；RLHF 不能写反</td></tr>
+    <tr><td>困惑度</td><td>每步平均在多少个词之间犹豫</td><td>就是 exp(损失)，不是另一套考试</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>优化和数值：选工具的边界</h3>
+  <table>
+    <tr><th>现象</th><th>该用</th><th>不该用</th></tr>
+    <tr><td>损失面很平、左右摇摆</td><td>动量：方向一致就加速，来回就抵消</td><td>把学习率一味加大，扁谷里会锯齿过冲</td></tr>
+    <tr><td>不同参数梯度差好几个数量级</td><td>Adam 这类逐参数步长</td><td>全模型一个学习率</td></tr>
+    <tr><td>怕溢出、范围要宽</td><td>BF16（指数位和 FP32 一样）</td><td>以为 FP16「也是 16 位所以范围一样」</td></tr>
+    <tr><td>要算 softmax</td><td>先减最大值再 exp</td><td>裸 exp。FP16 下十几就会 inf</td></tr>
+  </table>
+  <p>落地：公式先手推，再用 autograd 或中心差分对答案。梯度公式记住一行：预测概率减 one-hot。</p>
+</div>
+
+<div class="conclusion">
+  <h2>总结</h2>
+  <p>点积、链式法则、交叉熵=熵+KL、梯度=预测−标签、softmax 减 max。这五句能把第 0 章带回后面的章节。</p>
+  <h2>行动清单</h2>
+  <ol>
+    <li>下一周只读第 1 章全景，不新开数学。</li>
+    <li>第 2 章时亲手验证「梯度 = 预测 − 标签」。</li>
+    <li>第 3 章实现注意力时先写减 max，并核对复杂度是 O(n²d)。</li>
+    <li>符号不确定先翻 0.1 撞车清单。</li>
+  </ol>
+  <h2>关键认知转变</h2>
+  <p>大模型数学难，常常不是缺一门新课，而是同一个字母在换意思，以及把「返回位置 / 返回数值」「数据的熵 / 模型的错」看成了同一个东西。</p>
+</div>
+`;
+
+const { svg, height } = await buildSvg({ css: CSS, body, width: 1320 });
+fs.writeFileSync(OUT, svg, 'utf8');
+console.log('Generated:', OUT, 'height:', height);

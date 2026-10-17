@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 0 章 · 面向大模型的数学基础</title>
+<style>
+  :root{
+    --fg:#1f2328; --fg-dim:#57606a; --bg:#fff; --bg-soft:#f6f8fa;
+    --border:#d1d9e0; --accent:#0969da; --warn:#9a6700; --warn-bg:#fff8c5;
+    --ok:#1a7f37; --ok-bg:#dafbe1;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 24px 96px;
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--fg); background:var(--bg);
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  .back{display:inline-block;margin:20px 0 0;font-size:14px;color:var(--accent);text-decoration:none}
+  .back:hover{text-decoration:underline}
+  header{padding:28px 0 24px;border-bottom:1px solid var(--border);margin-bottom:28px}
+  h1{font-size:28px;line-height:1.35;margin:0 0 12px}
+  .meta{color:var(--fg-dim);font-size:14px}
+  .meta a{color:var(--accent)}
+  h2{font-size:22px;margin:40px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:18px;margin:28px 0 10px}
+  p{margin:12px 0}
+  code{font-family:var(--mono);font-size:.88em;background:var(--bg-soft);padding:.15em .4em;border-radius:4px}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--bg-soft);font-weight:600}
+  blockquote{margin:16px 0;padding:12px 18px;border-left:4px solid var(--accent);background:var(--bg-soft)}
+  blockquote p{margin:0}
+  .box{border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:16px 0}
+  .warn{background:var(--warn-bg);border-color:#d4a72c}
+  .ok{background:var(--ok-bg);border-color:#4ac26b}
+  ol,ul{padding-left:1.3em}
+  li{margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="./">← 返回每周主题墙</a>
+<header>
+  <h1>第 0 章 · 面向大模型的数学基础<br>
+    <span style="font-weight:400;color:var(--fg-dim);font-size:22px">精炼补丁，专门打初学者会认错的地方</span>
+  </h1>
+  <div class="meta">
+    学习留存 · 2026-10-17 · 本周只读第 0 章<br>
+    原文：<a href="https://jiejin93.github.io/llm-textbook/math.html">《大模型：从 Transformer 到部署》第 0 章</a>（介金）<br>
+    读法：选读章，也可当随查手册。通读大约 4–6 小时。后面打算每周一章。
+  </div>
+</header>
+
+<blockquote>
+  <p>这一章解决的核心问题是：只学过大学高数上册的人，缺哪几块数学，才会在后面 17 章的公式前停住。作者不铺全套教材，而是按依赖顺序补丁，并在每个符号第一次出现时把「最容易认错」标出来。</p>
+</blockquote>
+
+<h2>1. 为什么读起来脉络清楚</h2>
+<p>每节结构固定：<strong>直觉 → 形式定义 → 后文哪一章用到 → 可运行代码 → 延伸阅读</strong>。数学不再是孤立定义，而是「这个符号以后在第几章干什么」。</p>
+<p>依赖顺序也写死了，不能跳着乱补：</p>
+<ol>
+  <li>0.1 先学会读符号</li>
+  <li>0.2 线性代数、0.3 概率</li>
+  <li>两者合起来才撑得住 0.4 信息论、0.5 微积分与矩阵求导</li>
+  <li>最后汇入 0.6 优化、0.7 数值表示</li>
+</ol>
+<p>所以它既是字典，也是一张地图。后面读第 3 章注意力、第 12–13 章强化学习，卡住时可以退回对应小节，而不是重学一门课。</p>
+
+<h2>2. 初学者最容易认错的几处</h2>
+<p>醍醐灌顶的地方不在新公式，而在这些「同名不同义」和「名字很像但返回的东西不同」。</p>
+
+<table>
+  <thead><tr><th>容易错成</th><th>其实是</th><th>为什么会害到后面</th></tr></thead>
+  <tbody>
+    <tr><td><code>max</code> 和 <code>argmax</code> 是一回事</td><td><code>max</code> 返回最高值，<code>argmax</code> 返回最高值在哪</td><td>贪心解码要的是「哪个词」，不是「概率多大」</td></tr>
+    <tr><td>一句话的概率就该连乘</td><td>几百个小于 1 的条件概率连乘会下溢到机器表示不了</td><td>训练目标几乎总写成对数：乘变加，才既安全又好求导</td></tr>
+    <tr><td>同一个字母全书一个意思</td><td><code>H</code> 可以是熵、头数、隐藏维或 Hessian；<code>L</code> 是层数，花体 <code>ℒ</code> 才是损失</td><td>看到字母先问：后面跟着的是分布，还是矩阵？</td></tr>
+    <tr><td>温度也写成 <code>T</code></td><td>本书温度统一记 <code>τ</code>，<code>T</code> 在第 1–2 章是序列长度</td><td>和序列长度、训练时间、专家数撞车</td></tr>
+    <tr><td>交叉熵就是「模型有多差」</td><td>交叉熵 = 数据本身的熵 + KL。熵与模型无关，降不下去</td><td>最小化交叉熵等价于最小化 KL；Scaling Laws 里那个降不到的 <code>E</code> 就是这份熵</td></tr>
+    <tr><td>KL 两个方向差不多</td><td>前向 KL 逼模型盖住真实分布每个角落；反向 KL 让模型缩到某个峰上</td><td>RLHF 里 KL 约束的方向不是随便写的</td></tr>
+    <tr><td>困惑度和损失是两个指标</td><td><code>PPL = exp(损失)</code>，指数单调，所以是同一件事的两种刻度</td><td>训练日志上的交叉熵和评测表里的 PPL 可以互译</td></tr>
+    <tr><td>训练主要怕掉进局部最优</td><td>高维损失面上，鞍点远多于真正的坑</td><td>100 亿个方向「恰好都朝上」才困得住；动量和自适应步长是为了穿过平台、对付梯度量级差几个数量级</td></tr>
+    <tr><td>FP16 和 BF16 都是「半精度，差不多」</td><td>同样 16 位：FP16 范围窄（约 65504 就溢出），BF16 范围和 FP32 一样宽，但有效位更少</td><td>混合精度要不要 loss scaling，取决于你选的是窄范围还是糙精度</td></tr>
+    <tr><td>softmax 就是 <code>exp</code> 再归一化</td><td>必须先减去最大值。平移不变，但裸 <code>exp</code> 在 FP16 下 logits 到十几就会变成 inf</td><td>注意力实现里这是必写的一行，不是优化技巧</td></tr>
+  </tbody>
+</table>
+
+<div class="box warn">
+  <p><strong>矩阵乘法的形状规则单独记一条：</strong>内侧维度必须相等，<code>(m×k)×(k×n)=(m×n)</code>。报维度错误时先查这个。注意力里 <code>QKᵀ</code> 是 <code>(n×d)×(d×n)</code>，复杂度 <code>O(n²d)</code>——长上下文贵，贵在序列长度的平方，不是隐藏维。</p>
+</div>
+
+<h2>3. 七块零件，各自通向哪一章</h2>
+<table>
+  <thead><tr><th>小节</th><th>记住的一句</th><th>后面用在</th></tr></thead>
+  <tbody>
+    <tr><td>线性代数</td><td>点积是相似度；词是高维空间里的一个点</td><td>第 3 章注意力打分；CLIP 先把向量归一化再点积，得到的就是余弦相似度</td></tr>
+    <tr><td>概率</td><td>一句话的概率 = 条件概率连乘：<code>P(w₁…wₙ)=∏ P(wᵢ∣w&lt;ᵢ)</code></td><td>第 1 章语言模型定义；第 2 章训练与生成；相邻词不独立，这正是语言建模有意思的地方</td></tr>
+    <tr><td>信息论</td><td>越意外信息量越大；交叉熵用「错误的分布」给真实数据编码</td><td>训练目标 <code>-log P(下一个词∣前文)</code>；困惑度；RLHF 的 KL 约束</td></tr>
+    <tr><td>微积分</td><td>梯度指向最陡上坡，训练沿负梯度下坡</td><td>反向传播就是链式法则在计算图上连乘</td></tr>
+    <tr><td>softmax + 交叉熵</td><td>梯度 = 预测概率 − one-hot。对了梯度为 0，错得越离谱梯度越大</td><td>第 2 章输出层、第 3 章注意力权重、专家路由、策略分布，是同一个函数换了输入含义</td></tr>
+    <tr><td>优化</td><td>一步更新来自一阶泰勒：往下降最多的方向是负梯度</td><td>第 6 章 Adam ≈ 动量 + 逐参数自适应步长</td></tr>
+    <tr><td>数值</td><td>浮点是二进制科学计数法，精度和范围此消彼长</td><td>第 6 章混合精度，第 10、14 章量化</td></tr>
+  </tbody>
+</table>
+
+<div class="box ok">
+  <p><strong>一条可带走的工作流：</strong>公式先手推，再用 autograd 或中心差分对答案。不确定 softmax 雅可比对不对时，用 <code>(f(x+h)−f(x−h))/(2h)</code> 验，而不是对着书再抄一遍。</p>
+</div>
+
+<h2>4. 边界</h2>
+<ul>
+  <li>这一章不替代线代或概率课。特征值、大雅可比只要求直觉：矩阵有主方向，深度学习几乎从不显式求逆。</li>
+  <li>它是选读。可以跳着当字典用；但作者建议通读一遍后再看第 3 章和第 12–13 章，会顺很多。</li>
+  <li>符号以书后附录 A 为准。本章只排「同一字母撞车」的雷，不改附录。</li>
+  <li>本周只读完第 0 章，没有做章末的手算、编程和 Scaling Laws 思考题。那些留到用到对应章时再验。</li>
+</ul>
+
+<h2>5. 后面怎么读</h2>
+<p>节奏改成每周一章。第 0 章的零件先停在这里。下一章不继续推公式，而是先画大语言模型的全景：它到底是什么，后面十几章各自在解决什么，再把这些零件装回去。</p>
+<ol>
+  <li>读第 1 章时，只核对链式法则和「词是一个点」是否还站得住。</li>
+  <li>读第 2 章时，亲手把「梯度 = 预测 − 标签」推一遍，并用数值梯度验收。</li>
+  <li>读第 3 章时，回到 <code>O(n²d)</code> 和 softmax 减 max，确认注意力实现没有裸写 exp。</li>
+  <li>符号拿不准，先回 0.1 的撞车清单，再查附录 A。</li>
+</ol>
+</div>
+</body>
+</html>
