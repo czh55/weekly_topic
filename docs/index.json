@@ -1,6 +1,38 @@
 [
   {
     "week": "2026-W42",
+    "date": "2026-10-17",
+    "title": "从配时分配到 NP-hard",
+    "summary": "从地板配时的分配不均出发，把 P、NP、NP-hard、MILP 翻译成人话：难度来自离散选择，而整数变量零间隙时其实是白送的。",
+    "tags": [
+      "复杂度",
+      "NP-hard",
+      "MILP",
+      "配时"
+    ],
+    "slug": "np-hard-complexity-map",
+    "outputs": {
+      "html": "np-hard-complexity-map-总结.html"
+    }
+  },
+  {
+    "week": "2026-W42",
+    "date": "2026-10-17",
+    "title": "从一个配时问题到运筹学入门",
+    "summary": "用真实配时难题走一遍 LP、凸性与对偶：建模决定能伸手拿什么，凸性决定有没有全局最优，对偶给出可证明的下界。",
+    "tags": [
+      "运筹学",
+      "线性规划",
+      "凸优化",
+      "对偶"
+    ],
+    "slug": "lp-convexity-duality",
+    "outputs": {
+      "html": "lp-convexity-duality-总结.html"
+    }
+  },
+  {
+    "week": "2026-W42",
     "date": "2026-10-13",
     "title": "区块链设计精髓 · 比特币",
     "summary": "用 9 张图抓住四根支柱：链式哈希、工作量证明、数字签名、负反馈；并提炼 8 条可迁移的无人值守系统设计原则。",

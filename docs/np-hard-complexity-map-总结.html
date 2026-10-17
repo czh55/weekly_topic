@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从配时分配到 NP-hard — 写给数学不好的人的复杂度地图</title>
+<style>
+  :root{
+    --fg:#1f2328; --fg-dim:#57606a; --bg:#fff; --bg-soft:#f6f8fa;
+    --border:#d1d9e0; --accent:#0969da; --warn:#9a6700; --warn-bg:#fff8c5;
+    --danger:#cf222e; --danger-bg:#ffebe9; --ok:#1a7f37; --ok-bg:#dafbe1;
+    --code-bg:#f6f8fa; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 24px 96px;
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--fg); background:var(--bg);
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  .back{display:inline-block;margin:20px 0 0;font-size:14px;color:var(--accent);text-decoration:none}
+  .back:hover{text-decoration:underline}
+  header{padding:48px 0 24px;border-bottom:1px solid var(--border);margin-bottom:32px}
+  h1{font-size:28px;line-height:1.35;margin:0 0 12px}
+  .meta{color:var(--fg-dim);font-size:14px}
+  .meta code{font-size:13px}
+  h2{font-size:22px;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:18px;margin:32px 0 12px}
+  p{margin:12px 0}
+  code{font-family:var(--mono);font-size:.88em;background:var(--code-bg);padding:.15em .4em;border-radius:4px}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--bg-soft);font-weight:600}
+  tbody tr:nth-child(even){background:#fbfcfd}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  blockquote{margin:16px 0;padding:12px 18px;border-left:4px solid var(--accent);background:var(--bg-soft);color:var(--fg)}
+  blockquote p{margin:0}
+  .box{border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:20px 0}
+  .box>:first-child{margin-top:0} .box>:last-child{margin-bottom:0}
+  .box-title{font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+  .warn{background:var(--warn-bg);border-color:#d4a72c} .warn .box-title{color:var(--warn)}
+  .danger{background:var(--danger-bg);border-color:#ff8182} .danger .box-title{color:var(--danger)}
+  .ok{background:var(--ok-bg);border-color:#4ac26b} .ok .box-title{color:var(--ok)}
+  nav.toc{background:var(--bg-soft);border:1px solid var(--border);border-radius:6px;padding:18px 24px;margin:24px 0 40px}
+  nav.toc div.t{font-weight:600;margin-bottom:8px}
+  nav.toc ol{margin:0;padding-left:22px}
+  nav.toc li{margin:3px 0}
+  nav.toc a{color:var(--accent);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  hr{border:0;border-top:1px solid var(--border);margin:40px 0}
+  .footnote{font-size:14px;color:var(--fg-dim)}
+  .formula{
+    background:var(--bg-soft);border:1px solid var(--border);border-radius:6px;
+    padding:14px 20px;margin:16px 0;text-align:center;
+    font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:2.0;
+  }
+  .formula .cmt{display:block;font-family:var(--mono);font-size:12px;color:var(--fg-dim);margin-top:4px}
+  var{font-family:Georgia,serif;font-style:italic}
+  .big-num{font-family:var(--mono);font-weight:600}
+  details{border:1px dashed #c8d1d9;border-radius:6px;padding:10px 18px;margin:16px 0;background:#fbfcfd}
+  details summary{cursor:pointer;font-weight:600;font-size:14.5px}
+  details[open]{border-style:solid}
+  details p{font-size:14.5px}
+  .no{color:var(--fg-dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="./">← 返回每周主题墙</a>
+<header>
+  <h1>从配时分配到 NP-hard<br><span style="font-weight:400;color:var(--fg-dim);font-size:22px">写给数学不好的人：把 P、NP、MILP 全部翻译成人话</span></h1>
+  <div class="meta">
+    学习留存 · 2026-10-17 · 深度版的通俗重写<br>
+    深度版（严格证明、完整图表）：<code>allocation-to-np-hard-panorama-deep.html</code> —— 同一个故事，那边讲给数学好的人<br>
+    前作：<code>optimization-primer-signal-timing.html</code>（从一个配时问题到运筹学入门）<br>
+    性质：<strong>概念地图 + 案例推演</strong>，未修改任何代码
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="t">目录</div>
+  <ol>
+    <li><a href="#c1">起点：地板会不会造成分配不均</a></li>
+    <li><a href="#c2">water-filling：先分钱、后保底</a></li>
+    <li><a href="#c3">质疑登场："这是 MILP 问题"</a></li>
+    <li><a href="#c4">补课一：什么叫快，什么叫慢</a></li>
+    <li><a href="#c5">补课二：P 与 NP——做题难，对答案易</a></li>
+    <li><a href="#c6">补课三：NP-hard 与 NP-complete——难度的天花板</a></li>
+    <li><a href="#c7">难度从哪来：孤岛与一根轴</a></li>
+    <li><a href="#c8">一行之差：LP 与 MILP</a></li>
+    <li><a href="#c9">判决：这道题的整数是白送的（零间隙）</a></li>
+    <li><a href="#c10">回到工程：名字决定你伸手拿什么</a></li>
+    <li><a href="#c11">名词速查表</a></li>
+    <li><a href="#c12">继续学习的路径</a></li>
+  </ol>
+</nav>
+
+<!-- ===================================================== -->
+<h2 id="c1">1. 起点：地板会不会造成分配不均</h2>
+
+<p>一切从一个具体的工程疑问开始。信号配时有一条安全规矩：每个方向至少给这么多秒绿灯。行人过街需要时间，宁可效率低一点，不能不安全。这个下限，本文叫它<strong>地板</strong>。</p>
+
+<p>疑问是：地板的存在，会不会把绿灯分配搞得不均？</p>
+
+<p>先把现场角色介绍齐。全文只用下面几个记号，每个都绑着示例值：</p>
+
+<table>
+  <thead><tr><th style="width:60px">记号</th><th style="width:110px">名字</th><th>白话</th><th style="width:180px">示例值</th></tr></thead>
+  <tbody>
+    <tr><td><var>n</var></td><td>阶段数</td><td>一个周期里绿灯要分给几个方向</td><td>3（主路 A / 次路 B / 行人 C）</td></tr>
+    <tr><td><var>G</var></td><td>绿时总池</td><td>一个周期里能分的绿灯总秒数</td><td>108</td></tr>
+    <tr><td><var>r</var></td><td>流量占比</td><td>各方向车流占全部流量的比例</td><td>0.6 / 0.3 / 0.1</td></tr>
+    <tr><td><var>m</var></td><td>地板</td><td>每个方向最少必须给的秒数</td><td>12 / 12 / 25</td></tr>
+    <tr><td><var>t</var></td><td>分配结果</td><td>每个方向最后实际分到的秒数，算法的输出</td><td>—</td></tr>
+    <tr><td>λ</td><td>兑换率</td><td>每 1 份流量能兑换的绿灯秒数，第 7 节的关键角色</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <div class="box-title">全文的核心判据</div>
+  <p>对每个方向只问一句话："按流量它应得多少？地板是多少？"</p>
+  <p>应得 &lt; 地板，叫地板<strong>咬住了</strong>——安全底线真的在起作用。</p>
+  <p>应得 ≥ 地板，叫地板<strong>没咬住</strong>——按理说它应该完全隐形。</p>
+</div>
+
+<h3>1.1 咬住了：安全的代价，故意的</h3>
+
+<p>情景一：总池 G = 108，两个方向流量 95 : 5，地板都是 12。</p>
+
+<p>低流量方向按比例只该得 108 × 0.05 = <span class="big-num">5.4 秒</span>。但 12 秒是安全底线。于是从高流量方向拿 6.6 秒补给它：102.6 / 5.4 变成 96 / 12。</p>
+
+<p>这是安全压倒效率。<strong>方向正确，天经地义。</strong></p>
+
+<h3>1.2 没咬住，却还在偷偷挪钱：算法的记账 bug</h3>
+
+<p>情景二：总池 G = 108，两个方向流量 80 : 20，地板都是 12。</p>
+
+<p>按比例，两个方向该得 86.4 和 21.6。两个数都远超地板 12。没有任何约束被违反，地板在这个情景里本该完全隐形。</p>
+
+<p>但现行算法是"三步法"：第一步，人人先发地板 12 秒；第二步，剩下的 108 − 24 = 84 秒再按流量比例分。结果：</p>
+
+<table>
+  <thead><tr><th>口径</th><th class="num">高流量方向</th><th class="num">低流量方向</th><th class="num">比例</th></tr></thead>
+  <tbody>
+    <tr><td>纯流量比例（正确基准）</td><td class="num">86.4</td><td class="num">21.6</td><td class="num">4 : 1</td></tr>
+    <tr><td>现行三步法</td><td class="num">12 + 0.8 × 84 = <b>79.2</b></td><td class="num">12 + 0.2 × 84 = <b>28.8</b></td><td class="num">2.75 : 1</td></tr>
+    <tr><td>water-filling</td><td class="num">86.4</td><td class="num">21.6</td><td class="num">4 : 1（= 纯比例）</td></tr>
+  </tbody>
+</table>
+
+<p>高流量方向被削掉了 <span class="big-num">7.2 秒</span>。这一刀没有任何安全理由。</p>
+
+<p>原因可以一句话说破：那 24 秒"人头底薪"完全脱离了流量权重。每个方向的偏差，等于自己的地板，减去自己的流量占比乘上全部地板之和：</p>
+
+<div class="formula">
+  <var>t</var><sub>i</sub> − 应得<sub>i</sub> = <var>m</var><sub>i</sub> − <var>r</var><sub>i</sub> × Σ<var>m</var><sub>j</sub>
+  <span class="cmt">主路：12 − 0.8 × 24 = −7.2（被削）；次路：12 − 0.2 × 24 = +7.2（被补）</span>
+</div>
+
+<p>高流量方向恒为负，低流量方向恒为正。<strong>即使所有地板都不咬合，扭曲照样发生。</strong>阶段越多越明显：4 阶段 180 秒周期时，地板总和常占总池的 25–35%。</p>
+
+<h3>1.3 工资类比：保底工资制 vs 底薪 + 奖金制</h3>
+
+<table>
+  <thead><tr><th style="width:50%">water-filling = 保底工资制</th><th>现行三步法 = 底薪 + 奖金制</th></tr></thead>
+  <tbody>
+    <tr><td>按绩效分钱，只保证没人低于底薪</td><td>固定先发每人一笔底薪，剩下的钱才按绩效发奖金</td></tr>
+    <tr><td>所有人都远超保底线时，结果 = 纯绩效分配</td><td>即使所有人都远超保底线，高绩效者的总包仍比纯绩效制少</td></tr>
+    <tr><td>高绩效者完全不受保底条款影响</td><td>他那份"底薪"被匀给了低绩效者</td></tr>
+  </tbody>
+</table>
+
+<div class="box ok">
+  <div class="box-title">两副面孔一句话</div>
+  <p>咬住时的抬升是安全代价，该保留。没咬住时的稀释是记账 bug，该修。</p>
+  <p>现行算法的问题是把两者混在一起：它默认"所有人都需要救济"，把最坏情况的行为套用到所有情况。</p>
+  <p>饱和抬底（利用率 ≥ 90% 的方向把下限抬到日计划绿时）属于前者，是大望京 bad case 的止损，同样该保留。</p>
+</div>
+
+<p>修的方向也明确：换成分配算法 water-filling。接下来先看它怎么干活，再看围绕它的那场争论。</p>
+
+<!-- ===================================================== -->
+<h2 id="c2">2. water-filling：先分钱、后保底</h2>
+
+<p>名字来自通信领域的"注水"：把总功率想象成水，倒进高低不平的几个信道池子，水面自己找平。信号配时里的 water-filling 是同一个动作，只不过倒的是绿灯秒数。</p>
+
+<h3>2.1 四步流程</h3>
+
+<ol>
+  <li><strong>全池按比例</strong>：每个方向先按流量份额分整个 G。</li>
+  <li><strong>检查违例</strong>：谁分到的比自己的地板少，就把谁钉死在地板上，退出分配。</li>
+  <li><strong>池子缩水、复检</strong>：剩下的人按比例重分缩水后的池子，回到第 2 步。</li>
+  <li><strong>终止</strong>：某一轮没人跌破就放行；全员被锁，就人人恰好拿地板。</li>
+</ol>
+
+<h3>2.2 完整演算一遍</h3>
+
+<p>总池 G = 100，三个方向流量 80 : 15 : 5，地板 12 / 12 / 25（行人过街要 25 秒）：</p>
+
+<table>
+  <thead><tr><th>轮次</th><th class="num">池子</th><th class="num">主路 s1</th><th class="num">次路 s2</th><th class="num">行人 s3</th><th>这轮的动作</th></tr></thead>
+  <tbody>
+    <tr><td>第 1 轮</td><td class="num">100</td><td class="num">80</td><td class="num">15</td><td class="num">5，跌破 25</td><td>锁死 s3 = 25，池缩至 75</td></tr>
+    <tr><td>第 2 轮</td><td class="num">75</td><td class="num">63.2</td><td class="num">11.8，跌破 12</td><td class="num">25（已锁定）</td><td>锁死 s2 = 12，池缩至 63</td></tr>
+    <tr><td>第 3 轮</td><td class="num">63</td><td class="num">63</td><td class="num">12（已锁定）</td><td class="num">25（已锁定）</td><td>无人跌破，终止</td></tr>
+  </tbody>
+</table>
+
+<p>终态 <span class="big-num">63 / 12 / 25</span>。</p>
+
+<div class="box warn">
+  <div class="box-title">为什么必须一轮一轮复检</div>
+  <p>看次路 s2 的遭遇：第 1 轮它明明安全（15 ≥ 12）。</p>
+  <p>是行人被锁走 25 秒、池子缩到 75 之后，它才跌破地板的。</p>
+  <p>每锁死一个人，剩下每个人的份额都严格下降。</p>
+  <p>所以不能一次算完，必须循环。每轮至少锁死一个方向，最多 n 轮。真实场景 n ≤ 8，微秒级。</p>
+</div>
+
+<div class="box ok">
+  <div class="box-title">为什么地板必然被满足（白话不变量）</div>
+  <p>终止时，每个方向只有两种可能状态。</p>
+  <p>被锁的：拿的恰好是地板，之后永不再参与。</p>
+  <p>留下来的：在最后一轮通过了"不低于地板"的检查才被放行。</p>
+  <p>没有第三种状态。全体满足，无一例外。</p>
+</div>
+
+<h3>2.3 最后一步：凑成整数秒</h3>
+
+<p>以上计算都在实数里进行。最后取整用"最大余数法"：每项先向下取整，凑不齐的零头补给小数部分最大的项。</p>
+
+<p>演算：G = 100，流量 70 : 15 : 15，地板 12 / 30 / 12。次路首轮跌破（15 &lt; 30）被锁 30。剩余池 70 按比例分给主路和行人，连续解 57.647 / 30 / 12.353。取整得 57 / 30 / 12。还差 1 秒，小数部分 0.647 &gt; 0.353，补给主路。最终 <span class="big-num">58 / 30 / 12</span>：总和精确等于 100，每方向偏差小于 1 秒。</p>
+
+<p>现行手法的对照：把舍入尾差全部砸给最后一个方向。最坏产生 ±n/2 秒的位置偏差，跌破地板还要从倒数第二方向回调。最大余数法天然不会跌破整数地板，整个回调分支消失。</p>
+
+<h3>2.4 两个算法什么时候完全一致</h3>
+
+<p>全员都跌破地板的时候——终态就是人人恰好拿地板，两个算法输出逐值相同。换句话说，现行算法等价于把"所有人都需要救济"当成默认假设。water-filling 只对实际需要救济的人执行救济：<strong>安全语义 100% 保留，记账稀释消失。</strong></p>
+
+<details>
+<summary>深入：water-filling 不是启发式，是精确解</summary>
+<p>它精确求解一个凸优化问题（比例公平目标：流量加权的对数和最大化），输出与数学最优逐位一致，满足凸问题最优性的标准条件（KKT）。它和 Dijkstra 最短路一样，属于"带最优性证书的贪心"，不是碰运气的猜。完整推导见深度版 §1.5。</p>
+</details>
+
+<p>到这里，新算法本身讲完了。真正的大戏现在才开始。</p>
+
+<!-- ===================================================== -->
+<h2 id="c3">3. 质疑登场："这是 MILP 问题"</h2>
+
+<p>water-filling 提出后，收到一条认真的质疑：它是"不使用求解器的贪心暴力的求解方法"。这句话背后站着一个假设：<strong>配时分配是个 MILP 问题，这种题就该请专业求解器，自己写循环不严谨。</strong></p>
+
+<h3>3.1 MILP 是什么</h3>
+
+<p>中文叫混合整数线性规划。拆开看："线性 + 规划"前作讲过——目标函数和约束都是变量的一次式，"规划"是 1940 年代的历史用词，和计算机编程无关。多出来的"混合整数"是说：部分变量必须是整数。我们的"整数秒"正好是。</p>
+
+<p>配时分配确实能写成这个形式：</p>
+
+<div class="formula">
+  min Σ <var>w</var><sub>i</sub>·<var>g</var><sub>i</sub>　s.t.　Σ <var>g</var><sub>i</sub> = <var>G</var>，　<var>m</var><sub>i</sub> ≤ <var>g</var><sub>i</sub> ≤ <var>M</var><sub>i</sub>，　<var>g</var><sub>i</sub> ∈ ℤ
+  <span class="cmt">目标线性（加权总绿时） + 约束线性（周期守恒 + 地板/上限） + 整数秒 —— 语法检查通过</span>
+</div>
+
+<p>注意：判定一个问题"是不是 MILP"只看<strong>形式</strong>。不看难度，不看结构。就像任何能用加减乘除写出的算式都能叫"多项式方程"一样，配时分配确实能塞进这个格式。<strong>语法为真。</strong></p>
+
+<h3>3.2 但这个标签，听的人会自动脑补四件事</h3>
+
+<table>
+  <thead><tr><th style="width:38%">从"是 MILP"默认推出的</th><th>本题的实际情况</th></tr></thead>
+  <tbody>
+    <tr><td>需要求解器（Gurobi / SCIP / CBC）</td><td><b>假</b>——存在微秒级专用精确算法（water-filling）</td></tr>
+    <tr><td>NP-hard，没有多项式时间保证</td><td><b>假</b>——教科书里的"可分离凸资源分配"，多项式类成员</td></tr>
+    <tr><td>LP 松弛有分数间隙，需要分支搜索</td><td><b>假</b>——整数间隙恰好为零（第 9 节证明）</td></tr>
+    <tr><td>最坏情形运行时间不可控</td><td><b>假</b>——最多 n 轮循环，n ≤ 8</td></tr>
+  </tbody>
+</table>
+
+<p>四条全部落空。</p>
+
+<div class="box warn">
+  <div class="box-title">一句真话，信息量可以是零甚至负</div>
+  <p>这个标签不只是"说了等于没说"。</p>
+  <p>照它行动的人会去引求解器：外部依赖，外加几十毫秒延迟进热路径。</p>
+  <p>或者放弃对最优的期望："MILP 反正难，用启发式吧。"</p>
+  <p>每一步都是纯损失。一个不排除任何可能性、不支撑任何预测的真陈述，信息量为零。</p>
+</div>
+
+<p>要裁决这场争论，得先补三堂课：什么叫快、NP 是什么、难到底难在哪。补完再回头看这道题。</p>
+
+<!-- ===================================================== -->
+<h2 id="c4">4. 补课一：什么叫快，什么叫慢</h2>
+
+<p>复杂度理论里，"快"有精确含义：运行时间是规模 <var>n</var> 的<strong>多项式</strong>。O(n)、O(n²)、O(n³) 都算快。听起来 n³ 也不小，和指数一比就懂了。按每秒 10⁹ 次运算折算：</p>
+
+<table>
+  <thead><tr><th class="num">n</th><th class="num">n³（多项式）</th><th class="num">2ⁿ（指数）</th><th class="num">(n−1)!/2（阶乘，TSP 的路线数）</th></tr></thead>
+  <tbody>
+    <tr><td class="num">10</td><td class="num">10³ 次运算（微秒级）</td><td class="num">约 10³（微秒级）</td><td class="num">181,440（亚毫秒）</td></tr>
+    <tr><td class="num">15</td><td class="num">3.4×10³（微秒级）</td><td class="num">3.3×10⁴（微秒级）</td><td class="num">4.4×10¹⁰ → <b>44 秒</b></td></tr>
+    <tr><td class="num">20</td><td class="num">8×10³（微秒级）</td><td class="num">1.05×10⁶（毫秒级）</td><td class="num">6.1×10¹⁶ → <b>约 2 年</b></td></tr>
+    <tr><td class="num">30</td><td class="num">2.7×10⁴（微秒级）</td><td class="num">1.07×10⁹ → <b>约 1 秒</b></td><td class="num">4.4×10³⁰ → 约 10¹⁴ 年（<b>宇宙年龄的一万倍</b>）</td></tr>
+    <tr><td class="num">100</td><td class="num">10⁶（毫秒级）</td><td class="num">1.3×10³⁰ → 约 4×10¹³ 年</td><td class="num">数字大到失去物理意义</td></tr>
+  </tbody>
+</table>
+
+<p>两句白话：多项式算法在规模<strong>翻倍</strong>时，只是"多等一会"；指数算法在规模<strong>加一个常数</strong>时就翻倍；阶乘还要再凶一档。整座理论大厦的共识就一行：<strong>多项式 = 可行，指数 = 不可行。</strong></p>
+
+<!-- ===================================================== -->
+<h2 id="c5">5. 补课二：P 与 NP——做题难，对答案易</h2>
+
+<h3>5.1 先把问题变成是非题</h3>
+
+<p>复杂度理论只跟"是非题"打交道。优化问题都能转：TSP 的"最短巡回是多少"，变成"存不存在总长不超过 L 的巡回"；背包的"最多装多少价值"，变成"存不存在总价值 ≥ V 且总重 ≤ W 的组合"。会做题就能答是非；反过来二分 L 也能逼出最优。两边难度等价。</p>
+
+<h3>5.2 两个类的白话定义</h3>
+
+<table>
+  <thead><tr><th style="width:34%">类</th><th>定义（白话）</th><th>成员</th></tr></thead>
+  <tbody>
+    <tr><td><b>P</b><br><span class="no">Polynomial，多项式</span></td><td>存在多项式时间算法<strong>直接求解</strong>的问题</td><td>排序、最短路、匹配、线性规划（LP，1979 / 1984 年先后找到一般多项式算法）——以及配时分配（water-filling）</td></tr>
+    <tr><td><b>NP</b><br><span class="no">Nondeterministic Polynomial</span></td><td>给一个候选解，能多项式时间<strong>验证</strong>对错的是非题</td><td>P 的全体，加上 SAT、数独"有解吗"、TSP 判定版、背包判定版</td></tr>
+  </tbody>
+</table>
+
+<div class="box warn">
+  <div class="box-title">高频误读：NP 的 N 是 non-polynomial？</div>
+  <p>错。是 nondeterministic（非确定性）。设想一台会"猜"的机器：猜对了就多项式跑完。所以 NP 是"非确定性多项式"，不是"非多项式"。</p>
+</div>
+
+<h3>5.3 做题与对答案的鸿沟</h3>
+
+<p>用 TSP 判定版体会。30 个城市，找答案要试遍 4.4×10³⁰ 条路线——按第 4 节的表，约等于宇宙年龄的一万倍。而对一条候选路线：沿边加 30 个数，和 L 比大小。一眨眼。</p>
+
+<p>三件事：</p>
+<ol>
+  <li><strong>P ⊆ NP</strong>：能直接做的题，当然能对答案。</li>
+  <li>这道鸿沟就是 NP 存在的意义：对答案容易，不等于做题容易。</li>
+  <li><strong>P =? NP 是千禧年悬案</strong>：是否所有"对答案容易"的题都必然"做题容易"？学界共识几乎一边倒——不相等，但至今无人能证。奖金一百万美元。</li>
+</ol>
+
+<!-- ===================================================== -->
+<h2 id="c6">6. 补课三：NP-hard 与 NP-complete——难度的天花板</h2>
+
+<h3>6.1 归约：一台翻译机</h3>
+
+<p>需要最后一个工具。<strong>A 归约到 B</strong>（记 A ≤ B），白话：存在一台多项式时间的翻译机，把 A 的任何实例改写成 B 的实例，且答案一致——A 答"是"，当且仅当 B 答"是"。</p>
+
+<p>含义：如果 B 有快算法，翻译机免费把它改装成 A 的快算法。所以 <strong>B 不会比 A 容易</strong>。</p>
+
+<p>例：哈密尔顿回路归约到 TSP。把每条边长设成 1 或很大的数，问"有没有总长 ≤ n 的巡回"，就等价于问"有没有恰好每城过一次的路线"。</p>
+
+<h3>6.2 两档天花板</h3>
+
+<table>
+  <thead><tr><th style="width:130px">类</th><th style="width:44%">资格要求</th><th>身份一句话</th></tr></thead>
+  <tbody>
+    <tr><td><b>NP-hard</b></td><td>所有 NP 问题都能归约到它；不要求自己是是非题</td><td>纯<strong>下界声明</strong>："至少同难"。成员可以高到 NP 外面（停机问题——连快速验证都做不到），也可以恰好压在 NP 边界</td></tr>
+    <tr><td><b>NP-complete</b><br><span class="no">简称 NPC</span></td><td>既在 NP 内，又被全 NP 归约</td><td>NPC = NP ∩ NP-hard。天花板中恰好也是对答案题的那些</td></tr>
+  </tbody>
+</table>
+
+<div class="box warn">
+  <div class="box-title">最常见误读："NP-hard 比 NP-complete 更难"——不成立</div>
+  <p>NPC 是 NP-hard 里"最靠内"的一档：难到顶，但仍是对答案题。</p>
+  <p>纯 NP-hard 是"高到连 NP 的资格都够不着"。</p>
+  <p>方向是"更难或无法分类"，不是同一把尺子上再高一格。</p>
+</div>
+
+<h3>6.3 名录怎么来的</h3>
+
+<p>Cook 1971 年证明 SAT 是第一个 NPC：把任何 NP 问题的验证过程硬编码成布尔公式，凭空造出，不依赖已有成员。Karp 1972 年一篇论文接着做了 21 条归约链。之后五十年，每个新成员的入会仪式都一样：找一个已知 NPC 归约过来，传递性自动发会员证。</p>
+
+<p style="text-align:center;color:var(--fg-dim);font-size:14.5px">两条代表链：SAT → 3-SAT → 顶点覆盖 → … → 哈密尔顿回路 → TSP 判定版；SAT → 3-SAT → 精确覆盖 → … → 背包判定版（= 一维 MILP）</p>
+
+<p>"complete"（完备）的来历：一个点代表整个类。解了任意一个 NPC，等于见了全部 NP 的底。所以 P=NP 之争能浓缩成双向扳机：</p>
+
+<ul>
+  <li>做出任意一个 NPC 的多项式算法 → 翻译机把它改装成每个 NP 问题的算法 → P=NP。</li>
+  <li>证明任意一个 NPC 没有多项式算法 → 反证 → P≠NP。</li>
+</ul>
+
+<p>数千个化身，一个共性。打穿任意一个，等于打穿全部。</p>
+
+<h3>6.4 澄清表：NP-hard 不意味着什么（工程侧最重要）</h3>
+
+<table>
+  <thead><tr><th style="width:32%">常见误读</th><th>真相</th></tr></thead>
+  <tbody>
+    <tr><td>"NP-hard = 无解法"</td><td>解法总存在（暴力枚举必得最优），只是<b>最坏情形</b>指数时间</td></tr>
+    <tr><td>"NP-hard = 每次都慢"</td><td>实际实例常常瞬间解决——Gurobi 解百万变量 MILP 是日常；Concorde 已对数万城市 TSP 给出可证最优</td></tr>
+    <tr><td>"NP-hard = 求不出最优"</td><td>能求出。分支定界在好实例上毫秒级证明最优</td></tr>
+    <tr><td>"指数算法一定没用"</td><td>n ≤ 20 时 2ⁿ 也就百万级；本项目覆盖 LP 的 C(m,n) 枚举在 5 万组合护栏内毫秒级——<b>难的类 ≠ 难的实例</b></td></tr>
+    <tr><td>"NP-hard 是关于平均情况"</td><td>全部是<b>最坏情形</b>语义，对分布只字未提</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <div class="box-title">一句话</div>
+  <p>NP-hard 剥夺的不是"解出来"的能力，而是"承诺何时解完"的能力。</p>
+  <p>它是算法工程师的汇率表：告诉你什么问题上别浪费人生找通用快算法，什么问题上尽管找。</p>
+</div>
+
+<p>三堂课补完。现在可以问那个真正的问题了：同样是"离散选择"，为什么有的题长成指数爆炸，有的题却是小菜一碟？</p>
+
+<!-- ===================================================== -->
+<h2 id="c7">7. 难度从哪来：孤岛与一根轴</h2>
+
+<h3>7.1 先分清两种"不同"</h3>
+
+<p>配时结果 (50, 25, 25) 和 (49, 25, 26)：数值不同，但"谁被锁在地板上"的格局一样——同一结构，换个总池一代公式就出，不需要搜索。而 (50, 25, 25)（只锁行人）和 (18, 12, 25)（锁次路和行人）：结构不同，互相之间没有公式可推。</p>
+
+<p><strong>求解的真正成本 = 要区分多少个结构。</strong>数值解成千上万，全挤在少数几个结构里。</p>
+
+<h3>7.2 背包：独立旋钮，长出孤岛</h3>
+
+<p>实例：三个物品——物品1 价值 60、重 10；物品2 价值 100、重 20；物品3 价值 120、重 30；背包容量 50。每个物品是一个独立旋钮（带 / 不带），互不牵连。全部组合：</p>
+
+<table>
+  <thead><tr><th>组合</th><th class="num">总重</th><th class="num">总价值</th><th>备注</th></tr></thead>
+  <tbody>
+    <tr><td>都不带</td><td class="num">0</td><td class="num">0</td><td></td></tr>
+    <tr><td>{1}</td><td class="num">10</td><td class="num">60</td><td></td></tr>
+    <tr><td>{2}</td><td class="num">20</td><td class="num">100</td><td></td></tr>
+    <tr><td>{3}</td><td class="num">30</td><td class="num">120</td><td></td></tr>
+    <tr><td>{1,2}</td><td class="num">30</td><td class="num">160</td><td></td></tr>
+    <tr><td>{1,3}</td><td class="num">40</td><td class="num">180</td><td></td></tr>
+    <tr><td><b>{2,3}</b></td><td class="num">50</td><td class="num">220</td><td><b>最优，恰好装满</b></td></tr>
+    <tr><td>{1,2,3}</td><td class="num">60</td><td class="num">超重</td><td>容量只有 50</td></tr>
+  </tbody>
+</table>
+
+<p>3 个旋钮 → 2³ = 8 座孤岛。n 个物品 → 2ⁿ 座。格与格之间没有连续过渡，也没有公式互推——只能搜，或者建表。</p>
+
+<div class="box danger">
+  <div class="box-title">反例看板：打分救不了</div>
+  <p>按性价比排名（价值 ÷ 重量）：物品1 是 6，物品2 是 5，物品3 是 4。</p>
+  <p>但最优解 {2,3} 含垫底的物品3，排除第一名的物品1。</p>
+  <p>原因：物品之间通过剩余容量互相耦合。最优解把 50 的容量占满了，物品1 连 10 都挤不进。</p>
+  <p>不存在任何"只看物品自身属性"的打分，能让最优解恒为前 k 名。</p>
+</div>
+
+<h3>7.3 TSP：每条路线都是一座孤岛</h3>
+
+<p>一个旅行商要拜访 n 个城市，每城恰好一次，回到出发城市，总路程最短。4 城示例：</p>
+
+<table>
+  <thead><tr><th>距离</th><th>A</th><th>B</th><th>C</th><th>D</th></tr></thead>
+  <tbody>
+    <tr><td><b>A</b></td><td>—</td><td>10</td><td>15</td><td>20</td></tr>
+    <tr><td><b>B</b></td><td>10</td><td>—</td><td>35</td><td>25</td></tr>
+    <tr><td><b>C</b></td><td>15</td><td>35</td><td>—</td><td>30</td></tr>
+    <tr><td><b>D</b></td><td>20</td><td>25</td><td>30</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>最优路线 A→B→D→C→A = 10 + 25 + 30 + 15 = <span class="big-num">80</span>。注意：从 A 出发贪心选最近邻 B 没错；但第二步贪心会去 C——贪心拼不出全局最优，这是 TSP 的本质难点。</p>
+
+<p>路线数 = (n−1)!/2。两个除法：朴素数法是全排列 n!；① ÷n：同一个环有 n 种起点写法；② ÷2：环与它的反向是同一条路。4 城只有 3 条本质路线；n = 20 时约 2 年；n = 30 时约宇宙年龄的一万倍。每条路线是一座孤岛：数值上"差一点"的路线，结构上毫不相干。</p>
+
+<h3>7.4 配时：一根共享的轴</h3>
+
+<p>回到 water-filling。没被锁死的方向拿多少？t = r × λ——λ 是兑换率，每 1 份流量换多少秒绿灯。关键在于：谁被锁死，不取决于每个方向自己，而取决于全局水位 λ。</p>
+
+<p>给每个方向算一个"救济需求度" = 地板 ÷ 流量。示例（流量 0.6 / 0.3 / 0.1，地板 12 / 12 / 25）：主路 12÷0.6 = 20，次路 12÷0.3 = 40，行人 25÷0.1 = 250。地板越高、流量越小，越需要救济。</p>
+
+<p>锁死集合永远是"救济需求度排名的前 k 名"，k 由 λ 一刀切出：</p>
+
+<table>
+  <thead><tr><th class="num">总池</th><th>被锁死的</th><th>结果</th></tr></thead>
+  <tbody>
+    <tr><td class="num">G = 55</td><td>次路、行人</td><td>(18, 12, 25)</td></tr>
+    <tr><td class="num">G = 100</td><td>行人</td><td>(50, 25, 25)</td></tr>
+    <tr><td class="num">G = 250</td><td>分界点</td><td>行人恰好贴地板（0.1 × 250 = 25）</td></tr>
+    <tr><td class="num">G = 260</td><td>无</td><td>(156, 78, 26)</td></tr>
+  </tbody>
+</table>
+
+<p>名义上有 2ⁿ 种锁死集合。实际坍缩成 n+1 种（排名前缀）。而且 k 不是试出来的，是解方程解出来的。</p>
+
+<div class="box ok">
+  <div class="box-title">为什么背包玩不了"前 k 名"这套</div>
+  <p>背包的旋钮互相独立，又通过剩余容量互相耦合——只能搜或建表。</p>
+  <p>配时的旋钮被 λ 一根轴串起来——解一个方程收工。</p>
+</div>
+
+<table>
+  <thead><tr><th>问题</th><th>离散结构被什么编码</th><th class="num">结构数</th><th>归宿</th></tr></thead>
+  <tbody>
+    <tr><td><b>配时分配</b></td><td>一个标量 λ（一条线）</td><td class="num">n+1</td><td><b>P</b></td></tr>
+    <tr><td>0/1 背包</td><td>二维表（一张表）</td><td class="num">2ⁿ</td><td>NP-complete（有伪多项式动态规划）</td></tr>
+    <tr><td><b>TSP 判定版</b></td><td>无法低维编码（一盒孤岛）</td><td class="num">(n−1)!/2</td><td><b>NP-complete</b></td></tr>
+  </tbody>
+</table>
+
+<details>
+<summary>深入：water-filling 的循环，其实是在解方程</summary>
+<p>λ 依赖锁死集合（被锁的人不分钱），锁死集合又依赖 λ——一个鸡生蛋的隐式方程。迭代就是在解它：先猜一个锁死集合，算 λ，看谁跌破，更新集合，再算 λ。单调性保证唯一收敛，最多 n 轮。循环不是在搜索孤岛，是在解方程——这正是"带证书的贪心"与"碰运气的搜索"的分界线。</p>
+</details>
+
+<p>现在回头看那句"配时分配是 MILP"。MILP 的判定版在 NPC 区（下一节讲）。而这道题活在哪？还差最后一块拼图。</p>
+
+<!-- ===================================================== -->
+<h2 id="c8">8. 一行之差：LP 与 MILP</h2>
+
+<h3>8.1 LP 在 P 区</h3>
+
+<p>LP（线性规划）就是没有整数要求的 MILP：变量可以取任意小数。1979 年 Khachiyan 的椭球法、1984 年 Karmarkar 的内点法，先后给出了一般多项式时间算法。LP 从此稳稳住在 P 区，和排序、最短路同层。</p>
+
+<div class="box">
+  <div class="box-title">P 区内部的小插曲</div>
+  <p>工业界实际用的单纯形法，最坏情形是指数的——Klee–Minty 立方体专门构造了让它爬满 2ⁿ 个顶点的输入。</p>
+  <p>但实践里快得飞起。</p>
+  <p>"最坏情形的类"与"实际的实例"脱钩，在 P 区内部也存在。</p>
+</div>
+
+<h3>8.2 加一行，跨一个世界</h3>
+
+<table>
+  <thead><tr><th style="width:50%">LP（连续）</th><th>MILP（就多一行）</th></tr></thead>
+  <tbody>
+    <tr><td>min cᵀx</td><td>min cᵀx</td></tr>
+    <tr><td>s.t. Ax ≤ b</td><td>s.t. Ax ≤ b</td></tr>
+    <tr><td>x ∈ ℝⁿ</td><td>xⱼ ∈ ℤ　← 就这一行</td></tr>
+    <tr><td><b>→ P</b>（内点法多项式）</td><td>判定版 → <b>NP-complete</b></td></tr>
+  </tbody>
+</table>
+
+<p>两个资格白话验一遍。① 它在 NP 里：给一组整数取值，代入约束逐条验算、目标和 K 比大小，多项式时间。② 全 NP 可归约：归约链短得惊人——背包就是一维 MILP（一个线性约束 + 0/1 变量，正是 MILP 的最简形态），背包判定版是 NPC，会员证自动到手。这就是每个 MILP 求解器说明书第一页都写"最坏情形指数时间"的原因。</p>
+
+<p>反过来：LP 连 NPC 的门都摸不到。如果某个 NPC 问题能归约到 LP，翻译机加上 LP 的多项式算法，就等于那个 NPC 的多项式算法——P=NP。所以除非 P=NP，任何 NPC 都归约不到 LP。LP 是"归约的地板"。</p>
+
+<h3>8.3 MILP 求解器怎么干活：分支定界</h3>
+
+<p>每个节点做的事 = 解一次 LP 松弛（把整数要求暂时扔掉）。松弛解如果是分数——比如"带半个物品"——就分成两支继续逼问。每一处分数，都是约束没有替你裁决的离散选择，必须建树裁决。最坏情形，整棵树是指数的。</p>
+
+<p>于是关键问题变成：配时分配的松弛解，是整数还是分数？</p>
+
+<!-- ===================================================== -->
+<h2 id="c9">9. 判决：这道题的整数是白送的（零间隙）</h2>
+
+<h3>9.1 二维直觉：一把刀切出整数角</h3>
+
+<p>看最简单的两个方向的情况。可行域 = "两个方向的秒数加起来必须等于 G"这一条等式，加上每个方向的上下限。等式像一把刀，把整个平面切成一条线段。线段只有两个角（数学上叫顶点），都是它和上下限边界的交点：</p>
+
+<table>
+  <thead><tr><th>顶点</th><th>贴在边界上的</th><th>被等式钉死的自由坐标</th><th>结果</th></tr></thead>
+  <tbody>
+    <tr><td>线段左端</td><td>方向2 贴上限 60</td><td>方向1 = 100 − 60 = 40</td><td>(40, 60)</td></tr>
+    <tr><td>线段右端</td><td>方向1 贴上限 60</td><td>方向2 = 100 − 60 = 40</td><td>(60, 40)</td></tr>
+  </tbody>
+</table>
+
+<p>每个顶点至多一个坐标是"自由的"。而自由坐标被等式直接钉死：它等于总池减去其他坐标。其他坐标贴在整数边界上，总池本身是整数——所以自由坐标也是整数。<strong>每个顶点都是整数点。</strong>方向再多时同理：顶点至多一个自由坐标，照样被等式钉死在整数上。</p>
+
+<h3>9.2 推论链</h3>
+
+<ol>
+  <li>所有顶点都是整数点。</li>
+  <li>LP 的最优解总在顶点上取得（线性规划的基本定理）。</li>
+  <li>所以 LP 松弛的最优解本身就是整数可行解，整数间隙 = 0。</li>
+  <li>分支定界树只有根节点：第一次解 LP 就拿到整数答案，一次分支都不会发生。</li>
+</ol>
+
+<p>"用 MILP 求解器解配时分配"的真实含义是：付出求解器依赖，外加几十毫秒延迟，换来和一次除法循环（water-filling，微秒级）<strong>完全相同的数字</strong>。标签暗示的那台机器——分支树、割平面、指数最坏情形——从未通电。</p>
+
+<details>
+<summary>深入：正式的证书叫全单模性（TU）</summary>
+<p>把等式写成矩阵形式，这个矩阵是一行全 1。Hoffman–Kruskal 定理保证：这种结构下，顶点全部是整数。这正是"整数免费"家族的共同证书：网络流、二部图匹配、本题（单行全 1，最简实例）。</p>
+<p>反面对照：0/1 背包的约束矩阵同样"简单"，但松弛解大量取 0.5（半个物品）——间隙非零，货真价实的 NP-hard。关键不是约束长得简单，而是整数性与约束结构共振。完整证明见深度版 §2.3。</p>
+</details>
+
+<h3>9.3 什么时候这个标签开始有信息量</h3>
+
+<p>真值条件和有用条件是两回事。让后者成立的，是真离散互斥决策的引入：</p>
+
+<table>
+  <thead><tr><th style="width:34%">新决策</th><th>后果</th></tr></thead>
+  <tbody>
+    <tr><td>本周期跳过某方向（带上 0/1 变量）</td><td>松弛解出现"半跳过"的 0.5——真分数、真间隙、真分支，货真价实 NP-hard</td></tr>
+    <tr><td>方向重排（排列变量）</td><td>(n−1)!/2 量级的组合空间</td></tr>
+    <tr><td>跨周期耦合（上周期决策改写本周期约束）</td><td>状态空间随周期数指数增长</td></tr>
+  </tbody>
+</table>
+
+<p>到那时，"是 MILP"才意味着要评估求解时间上界、在求解器和启发式之间权衡。语法真值没变，是问题本身长出了配得上这个标签的组合结构。</p>
+
+<div class="box ok">
+  <div class="box-title">判决</div>
+  <p>"配时分配是 MILP"为真，因为这个标签只做语法检查。</p>
+  <p>它没有信息量，因为这道题的整数是结构白送的（零间隙）。</p>
+  <p>给问题起对名字——<strong>可分离凸资源分配</strong>——比给它一个宽而真的名字重要得多。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c10">10. 回到工程：名字决定你伸手拿什么</h2>
+
+<h3>10.1 本项目三个问题的最终坐标</h3>
+
+<table>
+  <thead><tr><th>问题</th><th>正确名字</th><th>求解方式</th><th>状态</th></tr></thead>
+  <tbody>
+    <tr><td>搭接流量归因（OverlapFlowAttributor）</td><td>覆盖 LP</td><td>顶点枚举（LP 基本定理保证覆盖）</td><td><b>已上线，默认开</b></td></tr>
+    <tr><td>方案选择清空时间（TrafficBasedPlanSelector）</td><td>覆盖 LP</td><td>同一个 CoveringLp 共用求解器</td><td><b>已上线，默认开</b></td></tr>
+    <tr><td>绿时分配（GreenTimeAllocator）</td><td>可分离凸资源分配</td><td>water-filling 锁死-重分循环</td><td>立项评估中（L0 dryRun → L1）</td></tr>
+  </tbody>
+</table>
+
+<p>三者共同的工程哲学：<strong>识别问题的连续结构，用问题自身的结构写专用多项式算法，避开通用求解器与整数建模。</strong></p>
+
+<h3>10.2 "贪心暴力"说法的最终判词</h3>
+
+<table>
+  <thead><tr><th style="width:30%">算法</th><th>枚举空间</th><th>最优性证书</th></tr></thead>
+  <tbody>
+    <tr><td>CoveringLp 顶点枚举</td><td>C(m,n) 组合全枚举</td><td>LP 基本定理（最优在顶点取得）</td></tr>
+    <tr><td>water-filling 锁死-重分</td><td>无</td><td>凸问题 KKT + 锁定单调性</td></tr>
+    <tr><td>现行三步法</td><td>无</td><td><b>没有</b>——机制 A 缺陷正源于此</td></tr>
+  </tbody>
+</table>
+
+<p>三者中唯一没有最优性证书的是现行算法。把 water-filling 叫"贪心暴力"、把现行算法当成默认正确，恰好说反了：water-filling 是"带最优性证明的贪心"，和 Dijkstra、Huffman 同一档位。真正配得上"（有原则的）暴力"之名的是 CoveringLp 的组合全枚举——它靠 LP 基本定理和规模护栏封顶（5 万组合内毫秒级），也是受控的。</p>
+
+<h3>10.3 "分配器是 MILP 世界"那句速记怎么读</h3>
+
+<p>决策档案里"分式 + 地板世界（MILP）"是工程爆炸半径警告的速记——指向 validatePlan 防线、变化摘要、下游消费方、89 路口回归的耦合深度，没有一条是数学不可解。两种读法导向完全不同的结局：误读为复杂度判定——"数学难、永远别动分配器"——永久错过一个微秒级精确解。正确读回工程风险——当时分配器没病所以不动；现在诊断出机制 A，替换算法带证书，值得动；动的时候带着当初警告的耦合小心动。</p>
+
+<h3>10.4 五问回顾</h3>
+
+<table>
+  <thead><tr><th style="width:44%">问题</th><th>答案锚点</th></tr></thead>
+  <tbody>
+    <tr><td>最小底的存在会造成分配不均吗？</td><td><a href="#c1">§1</a>：会。机制 B 是安全代价（保留），机制 A 是记账副作用（修）</td></tr>
+    <tr><td>配时分配是 MILP 吗？water-filling 是贪心暴力吗？</td><td><a href="#c3">§3</a>、<a href="#c9">§9</a>：语法为真、信息量为零（零间隙）；它是凸问题的精确解</td></tr>
+    <tr><td>NP-hard / NP-complete 到底什么意思？</td><td><a href="#c6">§6</a>：下界声明 / NP ∩ NP-hard；被没收的是"承诺"，不是"可解性"</td></tr>
+    <tr><td>"指数级结构不同的解"到底指什么？</td><td><a href="#c7">§7</a>：孤岛（背包 / TSP）vs 一根轴（λ）</td></tr>
+    <tr><td>LP 和 MILP 什么关系？</td><td><a href="#c8">§8</a>：一行之差 = P/NP 分界线最著名的化身；LP 是分支定界的发动机</td></tr>
+  </tbody>
+</table>
+
+<div class="box ok">
+  <div class="box-title">全系列一句话</div>
+  <p>MILP 这个标签量的是语法：有没有线性约束和整变量。</p>
+  <p>NP-hard 量的是拓扑：离散结构有没有被一个低维参数串起来。</p>
+  <p>配时分配语法上是 MILP，拓扑上在 P 区。"标签为真、信息量为零"的全部数学内容，就是这两个分类系统量的是不同的东西。</p>
+  <p>给问题起对名字，比给它一个宽而真的名字重要得多——因为名字决定你伸手去拿的，是求解器，还是 n 轮循环。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c11">11. 名词速查表</h2>
+
+<h3>11.1 复杂度类</h3>
+<table>
+  <thead><tr><th style="width:140px">词</th><th style="width:220px">全称</th><th>白话</th></tr></thead>
+  <tbody>
+    <tr><td><b>P</b></td><td>Polynomial</td><td>有多项式时间算法直接求解的问题</td></tr>
+    <tr><td><b>NP</b></td><td>Nondeterministic Polynomial</td><td>候选解能被多项式时间验证的是非题；N 是"非确定性"，不是"非多项式"</td></tr>
+    <tr><td><b>NP-hard</b></td><td>—</td><td>所有 NP 问题都能归约到它；纯下界声明，不要求自己是是非题</td></tr>
+    <tr><td><b>NP-complete</b></td><td>—</td><td>NP ∩ NP-hard；难到顶且仍是对答案题</td></tr>
+    <tr><td>判定问题</td><td>decision problem</td><td>是非题版本；复杂度理论只跟它打交道</td></tr>
+    <tr><td>归约</td><td>reduction</td><td>多项式翻译机；B 若有快算法，A 也就有了</td></tr>
+  </tbody>
+</table>
+
+<h3>11.2 优化与算法</h3>
+<table>
+  <tbody>
+    <tr><td><b>LP</b></td><td>Linear Programming</td><td>线性规划；连续变量；P 区成员</td></tr>
+    <tr><td><b>MILP</b></td><td>Mixed-Integer Linear Programming</td><td>混合整数线性规划；判定版 NP-complete</td></tr>
+    <tr><td>LP 松弛</td><td>relaxation</td><td>把整数要求暂时扔掉解一次；MILP 求解器的发动机</td></tr>
+    <tr><td>整数间隙</td><td>integrality gap</td><td>松弛解与真正整数最优之间的差；配时分配恰好为零</td></tr>
+    <tr><td>分支定界</td><td>branch and bound</td><td>靠反复分支逼问整数的搜索树；最坏指数</td></tr>
+    <tr><td>water-filling</td><td>注水</td><td>先按比例分、跌破地板者锁死、池缩复检；凸问题的精确解</td></tr>
+    <tr><td>λ</td><td>兑换率</td><td>每 1 份流量能兑换的绿灯秒数；锁死集合由它一刀切出</td></tr>
+    <tr><td>可分离凸资源分配</td><td>—</td><td>配时分配的正确名字；教科书多项式类</td></tr>
+    <tr><td><b>TU</b></td><td>Total Unimodularity</td><td>全单模性，"整数免费"的结构证书；网络流、匹配、本题</td></tr>
+    <tr><td><b>KKT</b></td><td>Karush–Kuhn–Tucker</td><td>凸问题最优性的标准条件；water-filling 满足它</td></tr>
+  </tbody>
+</table>
+
+<h3>11.3 问题与人名</h3>
+<table>
+  <tbody>
+    <tr><td><b>TSP</b></td><td>Traveling Salesman Problem</td><td>旅行商问题；路线数 (n−1)!/2</td></tr>
+    <tr><td>背包</td><td>knapsack</td><td>n 个独立旋钮 → 2ⁿ 座孤岛；= 一维 MILP</td></tr>
+    <tr><td><b>SAT</b></td><td>Boolean satisfiability</td><td>布尔可满足性；第一个 NP-complete（Cook 1971）</td></tr>
+    <tr><td><b>Karp</b></td><td>Richard Karp</td><td>1972 年一篇论文连做 21 条归约链</td></tr>
+    <tr><td><b>Khachiyan / Karmarkar</b></td><td>—</td><td>1979 椭球法 / 1984 内点法，LP 由此确定在 P</td></tr>
+    <tr><td><b>Dijkstra</b></td><td>Edsger Dijkstra</td><td>最短路算法；"带最优性证书的贪心"的同款档位</td></tr>
+    <tr><td><b>Klee–Minty</b></td><td>—</td><td>构造出让单纯形法最坏指数的立方体</td></tr>
+    <tr><td><b>Gurobi / Concorde</b></td><td>—</td><td>商用 MILP 求解器 / TSP 专用求解器（已证数万城市最优）</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================================================== -->
+<h2 id="c12">12. 继续学习的路径</h2>
+
+<ol>
+  <li>想看严格证明：深度版 <code>allocation-to-np-hard-panorama-deep.html</code>——TU 证明、KKT 推导、全套图表。</li>
+  <li>想补 LP 背景：前作 <code>optimization-primer-signal-timing.html</code>——从一个配时问题到 LP、凸性与对偶。</li>
+  <li>想看顶点枚举：<code>lp-vertex-enumeration-explained.html</code>——本项目无求解器 LP 的原理。</li>
+</ol>
+
+<blockquote>
+  <p><strong>给问题起对名字，是算法选型的第一决策。</strong>名字错了，你会伸手去拿求解器；名字对了，一个 n 轮循环就是全部。这次争论把一个 Java 工程师领进了计算复杂度的门——按需学习，比按课表学习记得牢。</p>
+</blockquote>
+
+<hr>
+
+<p class="footnote">
+  相关文档：<code>docs/allocation-to-np-hard-panorama-deep.html</code>（深度版）·
+  <code>docs/optimization-primer-signal-timing.html</code>（前作）·
+  <code>docs/lp-vertex-enumeration-explained.html</code>（顶点枚举）<br>
+  本文与深度版讲同一组事实：所有数字、结论、案例一一对应，只把叙述换成了白话。
+</p>
+
+</div>
+</body>
+</html>

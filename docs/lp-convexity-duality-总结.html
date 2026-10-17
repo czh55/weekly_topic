@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从一个配时问题到运筹学入门 — LP、凸性与对偶的工程之旅</title>
+<style>
+  :root{
+    --fg:#1f2328; --fg-dim:#57606a; --bg:#fff; --bg-soft:#f6f8fa;
+    --border:#d1d9e0; --accent:#0969da; --warn:#9a6700; --warn-bg:#fff8c5;
+    --danger:#cf222e; --danger-bg:#ffebe9; --ok:#1a7f37; --ok-bg:#dafbe1;
+    --code-bg:#f6f8fa; --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 24px 96px;
+    font:16px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--fg); background:var(--bg);
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  .back{display:inline-block;margin:20px 0 0;font-size:14px;color:var(--accent);text-decoration:none}
+  .back:hover{text-decoration:underline}
+  header{padding:48px 0 24px;border-bottom:1px solid var(--border);margin-bottom:32px}
+  h1{font-size:28px;line-height:1.35;margin:0 0 12px}
+  .meta{color:var(--fg-dim);font-size:14px}
+  .meta code{font-size:13px}
+  h2{font-size:22px;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h3{font-size:18px;margin:32px 0 12px}
+  h4{font-size:16px;margin:24px 0 8px;color:var(--fg-dim)}
+  p{margin:12px 0}
+  code{font-family:var(--mono);font-size:.88em;background:var(--code-bg);padding:.15em .4em;border-radius:4px}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6}
+  pre code{background:none;padding:0;font-size:inherit}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--bg-soft);font-weight:600}
+  tbody tr:nth-child(even){background:#fbfcfd}
+  blockquote{margin:16px 0;padding:12px 18px;border-left:4px solid var(--accent);background:var(--bg-soft);color:var(--fg)}
+  blockquote p{margin:0}
+  .box{border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:20px 0}
+  .box>:first-child{margin-top:0} .box>:last-child{margin-bottom:0}
+  .box-title{font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+  .warn{background:var(--warn-bg);border-color:#d4a72c} .warn .box-title{color:var(--warn)}
+  .danger{background:var(--danger-bg);border-color:#ff8182} .danger .box-title{color:var(--danger)}
+  .ok{background:var(--ok-bg);border-color:#4ac26b} .ok .box-title{color:var(--ok)}
+  .ref{font-family:var(--mono);font-size:12.5px;color:var(--fg-dim)}
+  nav.toc{background:var(--bg-soft);border:1px solid var(--border);border-radius:6px;padding:18px 24px;margin:24px 0 40px}
+  nav.toc div.t{font-weight:600;margin-bottom:8px}
+  nav.toc ol{margin:0;padding-left:22px}
+  nav.toc li{margin:3px 0}
+  nav.toc a{color:var(--accent);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  hr{border:0;border-top:1px solid var(--border);margin:40px 0}
+  .footnote{font-size:14px;color:var(--fg-dim)}
+  .formula{
+    background:var(--bg-soft);border:1px solid var(--border);border-radius:6px;
+    padding:14px 20px;margin:16px 0;text-align:center;
+    font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:2.0;
+  }
+  .formula .cmt{display:block;font-family:var(--mono);font-size:12px;color:var(--fg-dim);margin-top:4px}
+  .brace{color:var(--fg-dim)}
+  var{font-family:Georgia,serif;font-style:italic}
+  .term{display:inline-block;font-size:12px;padding:1px 7px;border-radius:10px;background:var(--bg-soft);border:1px solid var(--border);color:var(--fg-dim);vertical-align:middle}
+  .stage-matrix{font-family:var(--mono);font-size:13.5px}
+  .stage-matrix td,.stage-matrix th{text-align:center}
+  .big-num{font-family:var(--mono);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="back" href="./">← 返回每周主题墙</a>
+<header>
+  <h1>从一个配时问题到运筹学入门<br><span style="font-weight:400;color:var(--fg-dim);font-size:22px">LP、凸性与对偶：一份写给工程师的数学地图</span></h1>
+  <div class="meta">
+    学习留存 · 2026-09-14 · 源于搭接流量归因专题的延伸讨论<br>
+    姊妹篇：<code>overlap-flow-attribution-discussion.html</code>（搭接分摊问题本体）<br>
+    性质：<strong>概念地图 + 案例推演</strong>，未修改任何代码
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="t">目录</div>
+  <ol>
+    <li><a href="#c1">起点：一个真实的配时难题</a></li>
+    <li><a href="#c2">什么是线性规划</a></li>
+    <li><a href="#c3">LP 通常解决什么问题</a></li>
+    <li><a href="#c4">优化问题的分类地图：三根轴</a></li>
+    <li><a href="#c5">凸与非凸：优化世界的地形学</a></li>
+    <li><a href="#c6">目标二次、约束线性：QP 解剖</a></li>
+    <li><a href="#c7">LP 与 DP：两个维度的东西</a></li>
+    <li><a href="#c8">学科归属：为什么大学没学过</a></li>
+    <li><a href="#c9">核心主线：建模 → 凸性 → 对偶下界 → 评分</a></li>
+    <li><a href="#c10">这条主线如何改变了工程决策</a></li>
+    <li><a href="#c11">缩写与人名速查表</a></li>
+    <li><a href="#c12">继续学习的路径</a></li>
+  </ol>
+</nav>
+
+<!-- ===================================================== -->
+<h2 id="c1">1. 起点：一个真实的配时难题</h2>
+
+<p>一切从一个具体得不能再具体的路口说起。<strong>二通西路南口 plan1</strong>，三股车流、两个阶段：</p>
+
+<table class="stage-matrix">
+  <thead><tr><th>车流（pair）</th><th>S1 东西直行</th><th>S2 西向通行</th></tr></thead>
+  <tbody>
+    <tr><td>东-直行</td><td>58.8</td><td>·</td></tr>
+    <tr><td>西-直行 <span class="term">搭接</span></td><td>48.5</td><td>48.5</td></tr>
+    <tr><td>西-左转</td><td>·</td><td>6.0</td></tr>
+  </tbody>
+</table>
+
+<p>数字是归一化流量（用户数 ÷ log₂(车道数+1)）。西-直行是搭接车流：它在两个阶段都保持绿灯。配时引擎的现行做法是把它<strong>平分</strong>进两个阶段（÷stageCount），于是 S2 的权重被西-直行的「半份」48.5÷2 = 24.25 撑大——而它本来只需服务 6.0 的左转。引擎口径算出总权重 <span class="big-num">83.1</span>。</p>
+
+<p>但直觉告诉我们这里面有浪费：S1 被东-直行的 58.8 撑起来后，西-直行（只要 48.5）<strong>顺带就被放完了</strong>，S2 只需要留 6.0 给左转。如果这样安排，总权重只要 <span class="big-num">64.8</span>。两个数字差 <span class="big-num">28%</span>。</p>
+
+<div class="box warn">
+  <div class="box-title">真正的问题不是「哪个方案好」，而是……</div>
+  <p>「我怎么<strong>证明</strong> 64.8 已经是最优，而不是 64.5 或 63？我怎么<strong>量化</strong> 83.1 浪费了多少、其他算法又各自浪费多少？」——这个问题把我们一路引向线性规划、凸性、对偶理论和一整套运筹学地图。本文就是这条路线的完整留存。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c2">2. 什么是线性规划</h2>
+
+<h3>2.1 名字拆解：线性 + 规划</h3>
+
+<p><strong>「线性」</strong>指数学结构：目标函数和所有约束都是变量的一次式——变量只以一次方出现，没有乘积、没有平方、没有 sin/cos。任何一个出现，就不再是 LP。</p>
+
+<p><strong>「规划」</strong>（programming）是个历史误会的产物：1940 年代美军为「制定行动方案」发明的术语，<strong>与计算机编程无关</strong>——LP 的诞生（Dantzig，1947，单纯形法）比现代编程语言还早几年。同一个用法也留在「动态规划」（Dynamic Programming）这个名字里。</p>
+
+<h3>2.2 标准形式与三要素</h3>
+
+<div class="formula">
+  min <var>c</var><sup>T</sup><var>x</var><br>
+  s.t.&nbsp; <var>A</var><var>x</var> ≤ <var>b</var>,&nbsp;&nbsp; <var>x</var> ≥ 0
+  <span class="cmt">目标线性 + 约束线性 + 变量非负</span>
+</div>
+
+<p>建模套路永远是三句话：</p>
+<ul>
+  <li><strong>变量</strong> = 你能控制的东西；</li>
+  <li><strong>约束</strong> = 世界的规则；</li>
+  <li><strong>目标</strong> = 你想要的方向。</li>
+</ul>
+
+<h3>2.3 把配时问题翻译成 LP</h3>
+
+<p>对二通西路南口：变量是各阶段时长 <var>t</var>₁、<var>t</var>₂；规则是「车流只认绿灯总量够不够，不认在哪个阶段」；目标是总时长最短。</p>
+
+<div class="formula">
+  min&nbsp; <var>t</var>₁ + <var>t</var>₂<br>
+  s.t.&nbsp; <var>t</var>₁ ≥ 58.8 <span class="brace">（东直：只在 S1 放）</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <var>t</var>₁ + <var>t</var>₂ ≥ 48.5 <span class="brace">（西直：两段都放，加起来够就行）</span><br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <var>t</var>₂ ≥ 6.0 <span class="brace">（西左：只在 S2 放）</span>
+</div>
+
+<p>注意 <var>t</var>₁ + <var>t</var>₂ ≥ 48.5 这条约束——它就是「西直可以蹭」的数学表达：S1 撑得够高，S2 完全不出力也行。<strong>LP 建模的全部艺术，就是把业务规则写成这种「加起来够就行」的等式/不等式。</strong></p>
+
+<!-- ===================================================== -->
+<h2 id="c3">3. LP 通常解决什么问题</h2>
+
+<p>本质上是同一类问题的千变万化：<strong>有限资源，怎么分配，使收益最大 / 成本最小</strong>。</p>
+
+<table>
+  <thead><tr><th>问题家族</th><th>典型问题</th><th>线性结构</th></tr></thead>
+  <tbody>
+    <tr><td>生产计划</td><td>工时/原料/机器台时有限，产几种产品，怎么排产利润最大</td><td>变量=各产品产量，约束=资源上限</td></tr>
+    <tr><td>配比/混合</td><td>油品调和、饲料配方（最早的「营养问题」）</td><td>变量=各成分用量</td></tr>
+    <tr><td>运输/物流</td><td>产地→仓库/门店的货运量分配，运费最小</td><td>变量=各条线路运量</td></tr>
+    <tr><td>网络流</td><td>最大流、管道/电网调度</td><td>变量=各边流量</td></tr>
+    <tr><td>金融</td><td>组合优化、现金流匹配</td><td>变量=各类资产持仓</td></tr>
+    <tr><td>排班与调度</td><td>人员排班、班次覆盖（连续松弛版）</td><td>变量=各班次人数</td></tr>
+  </tbody>
+</table>
+
+<p>配时归因也在这个家族里：每个阶段是一台「机器」，每股车流是要被满足的「订单」，搭接车流是「可以用两台机器合力完成」的订单。</p>
+
+<div class="box ok">
+  <div class="box-title">为什么 LP 成了工程默认选项</div>
+  <p>不是世界真的线性，而是：① 线性模型在业务精度内「够用」；② 求解器极快极稳（百万变量级）；③ 凸性带来的一切保证（见第 5 节）。<strong>问题天生非线性，模型主动线性化</strong>——LP 的统治力来自工程上的「够用且可靠」。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c4">4. 优化问题的分类地图：三根轴</h2>
+
+<p>「LP 的对立面是 NLP」对，但不完整。优化问题的分类有三根正交的轴：</p>
+
+<pre><code>轴1：函数形状    线性 ──── 非线性
+轴2：变量类型    连续 ──── 整数/混合（IP / MIP）
+轴3：可解性      凸   ──── 非凸      ← 这根轴在实践中最重要</code></pre>
+
+<table>
+  <thead><tr><th>类别</th><th>目标/约束</th><th>变量</th><th>可解性</th><th>典型问题</th></tr></thead>
+  <tbody>
+    <tr><td><b>LP</b></td><td>全线性</td><td>连续</td><td>凸</td><td>生产计划、运输、配时下界</td></tr>
+    <tr><td><b>QP</b></td><td>目标二次、约束线性</td><td>连续</td><td>凸（Hessian 半正定时）</td><td>组合风险、SVM、最小二乘</td></tr>
+    <tr><td><b>SOCP</b></td><td>线性+二阶锥约束</td><td>连续</td><td>凸</td><td>机器人控制、鲁棒优化</td></tr>
+    <tr><td>凸 NLP</td><td>任意凸函数</td><td>连续</td><td>凸</td><td>几何规划</td></tr>
+    <tr><td>非凸 NLP</td><td>有非凸项</td><td>连续</td><td><b>只有局部最优</b></td><td>结构设计、化工流程、深度学习</td></tr>
+    <tr><td><b>IP / MIP</b></td><td>线性+整数变量</td><td>离散/混合</td><td>NP-hard</td><td>选址、排班、TSP</td></tr>
+    <tr><td><b>MINLP</b></td><td>非线性+整数</td><td>离散/混合</td><td>最难档</td><td>工艺综合设计</td></tr>
+  </tbody>
+</table>
+
+<div class="box warn">
+  <div class="box-title">关键认知</div>
+  <p>实践中的真正分水岭<strong>不是线性/非线性，而是凸/非凸</strong>。凸的非线性规划（QP、SOCP）几乎和 LP 一样可靠；一旦非凸，再「简单」的问题也可能掉进局部最优。工程界口头禅：<strong>能写成凸的就别写成非凸的，能写成线性的就别写成非线性的。</strong></p>
+</div>
+
+<p>家族谱系是一条链：<strong>LP ⊂ QP ⊂ SOCP ⊂ 凸NLP</strong>——每层放宽目标形状，但死守凸性底线（<var>H</var> = 0 时 QP 退化为 LP，所以 LP 是 QP 的特例）。</p>
+
+<!-- ===================================================== -->
+<h2 id="c5">5. 凸与非凸：优化世界的地形学</h2>
+
+<h3>5.1 碗与月球表面</h3>
+
+<p>把优化想象成<strong>扔一颗弹珠找碗底</strong>：</p>
+<ul>
+  <li><strong>凸</strong>：地形是一只碗。弹珠从任何位置放下，顺坡滚落，<strong>必然落进同一个碗底</strong>——全局最低点。</li>
+  <li><strong>非凸</strong>：山地，多个山坳、山脊、平台。弹珠从不同位置放下滚进<strong>不同的山坳</strong>——你找到的「最低点」可能只是附近最深的一个，隔壁山谷更深，但弹珠翻不过山脊。</li>
+</ul>
+
+<h3>5.2 线段测试：严格定义只要两句话</h3>
+
+<p><strong>凸集</strong>（可行域的形状）：集合里任取两点，连线<strong>全程不出界</strong>。实心圆、矩形是凸的；月牙形、环形不是（连线会穿出界外）。</p>
+
+<p><strong>凸函数</strong>（目标函数的形状）：图像上任取两点，连线（弦）<strong>不低于</strong>函数本身：</p>
+
+<div class="formula">
+  <var>f</var>(λ<var>x</var> + (1−λ)<var>y</var>) ≤ λ<var>f</var>(<var>x</var>) + (1−λ)<var>f</var>(<var>y</var>),&nbsp;&nbsp;∀λ ∈ [0,1]
+  <span class="cmt">图像在弦的下方——只许凹下去（碗），不许鼓起来（山丘）</span>
+</div>
+
+<p><var>x</var>²、|<var>x</var>|、<var>e</var><sup><var>x</var></sup> 是凸的；sin(<var>x</var>) 在整条数轴上不凸。一个优化问题是凸的 = 凸的目标函数 + 凸的可行域。</p>
+
+<h3>5.3 凸性为什么是「免死金牌」</h3>
+
+<p><strong>核心定理：凸问题的任何局部最优就是全局最优。</strong>推论：</p>
+<ol>
+  <li><strong>下降算法不会被骗</strong>：梯度下降、内点法在碗形地形上随便走，坡度为零处必是全局最低——起点无关；</li>
+  <li><strong>可验证的停机条件</strong>：找到局部最优即可宣布胜利；</li>
+  <li><strong>对偶理论成立</strong>：LP 的影子价格、对偶下界这些工具（第 9 节的主角）依赖凸性；</li>
+  <li><strong>多项式复杂度</strong>：内点法对凸问题有理论保证。</li>
+</ol>
+
+<p>非凸问题逐条失效：算法被困局部最优（解依赖初始点）、存在鞍点（梯度为零但既非最高也非最低的「山口」）、甚至<strong>判断「这是不是全局最优」本身就是 NP-hard</strong>。</p>
+
+<h3>5.4 快速判定表</h3>
+
+<table>
+  <thead><tr><th>判定手段</th><th>凸</th><th>非凸</th></tr></thead>
+  <tbody>
+    <tr><td>一维图像</td><td>只有一个谷底，弦在曲线上方</td><td>多个谷底或有鼓包</td></tr>
+    <tr><td>二阶导 / Hessian</td><td>处处 ≥ 0（半正定）</td><td>某处 &lt; 0</td></tr>
+    <tr><td>函数家族</td><td>线性（<b>既凸又凹</b>）、<var>x</var>²、‖<var>x</var>‖、max/min of 凸函数</td><td>sin、含负平方项的多项式、乘积 <var>xy</var></td></tr>
+    <tr><td>可行域</td><td>线性约束围出的多面体（LP 天然凸）</td><td>曲约束、整数约束</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <div class="box-title">两个容易忽略的细节</div>
+  <p>① <strong>线性函数同时是凸和凹</strong>（弦和曲线重合）——LP 自动继承凸性的一切好处，这是它「可靠」的根源。② <strong>max 运算保凸但不保凹、且有折点不可导</strong>——配时里「阶段权重 = 成员流量的 max」这个折点，正是搭接问题「鸡生蛋」第一层的来源；max 凸但不可导，给优化添的是另一种麻烦。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c6">6. 目标二次、约束线性：QP 解剖</h2>
+
+<h3>6.1 多面体里扣一只碗</h3>
+
+<div class="formula">
+  min&nbsp; ½<var>x</var><sup>T</sup><var>H</var><var>x</var> + <var>c</var><sup>T</sup><var>x</var><br>
+  s.t.&nbsp; <var>A</var><var>x</var> ≤ <var>b</var>
+  <span class="cmt">目标可以弯（二次），边界必须直（线性）</span>
+</div>
+
+<p>几何意象：线性约束围出<strong>多面体</strong>（每条约束是一刀直切）；二次目标的等高线是一族<strong>同心椭圆</strong>；求解 = 在多面体内部找这只碗的最低点。三种典型结局：碗底在内部（无约束最优恰好可行）、碗底在外（最优解贴在某个平面上「顶着边界滚」）、碗被切到只剩边缘（解卡在角上，退化得像 LP）。</p>
+
+<p>与 LP 的本质区别：<strong>LP 最优解必在顶点，QP 最优解可以停在一条棱的中段</strong>。</p>
+
+<h3>6.2 二次目标从哪来</h3>
+
+<p>线性说「每单位代价恒定」；二次项说<strong>代价随规模加速</strong>。天然来源：风险的方差本质（协方差是权重两两相乘的二次型）、误差的平方惩罚（最小二乘）、能量的物理定义（½<var>mv</var>²、<var>I</var>²<var>R</var>）、平滑性惩罚（相邻控制量变化的平方和）。</p>
+
+<h3>6.3 配时里的 QP：软约束微调</h3>
+
+<div class="formula">
+  min&nbsp; Σ<var>i</var> (<var>g</var><sub><var>i</var></sub> − <var>r</var><sub><var>i</var></sub>·<var>G</var>)²<br>
+  s.t.&nbsp; <var>g</var><sub><var>i</var></sub> ≥ 12,&nbsp;&nbsp; Σ<var>g</var><sub><var>i</var></sub> = <var>G</var>
+  <span class="cmt">目标=偏离理想占比的平方和；约束=地板与守恒</span>
+</div>
+
+<p>与 LP 的分工：LP 回答「<strong>能否完全覆盖</strong>」（判定问题），QP 更适合「<strong>无法完美时如何最不坏</strong>」——偏离难免，那就按平方计费地最小化它。</p>
+
+<!-- ===================================================== -->
+<h2 id="c7">7. LP 与 DP：两个维度的东西</h2>
+
+<table>
+  <thead><tr><th>维度</th><th>线性规划 (LP)</th><th>动态规划 (DP)</th></tr></thead>
+  <tbody>
+    <tr><td>本质</td><td><b>优化问题的类别</b>（线性结构）</td><td><b>求解算法的范式</b>（多阶段递推）</td></tr>
+    <tr><td>变量</td><td>连续</td><td>通常是离散状态/决策</td></tr>
+    <tr><td>建模核心</td><td>变量+线性目标+线性约束</td><td>状态+阶段+转移方程</td></tr>
+    <tr><td>求解方式</td><td>单纯形法、内点法</td><td>手推递推式+记忆化</td></tr>
+    <tr><td>前提</td><td>无（线性即凸）</td><td>最优子结构 + 重叠子问题</td></tr>
+    <tr><td>典型问题</td><td>生产计划、运输、资源分配</td><td>最短路、背包、编辑距离、序列比对</td></tr>
+  </tbody>
+</table>
+
+<p>它们不是并列关系——同一个问题可以「是 LP 且用 DP 解」。CS 本科只教 DP 当「算法设计技巧」（背包、LCS、Floyd），不讲它在运筹学里的出身（Bellman 的多阶段决策理论），更不把 LP/DP/凸性串成一张图。<strong>学过碎片，缺的是坐标系</strong>——本文就是补坐标系。</p>
+
+<!-- ===================================================== -->
+<h2 id="c8">8. 学科归属：为什么大学没学过</h2>
+
+<p>这整套东西属于<strong>运筹学（Operations Research）/ 最优化（Optimization）</strong>，往上追一层是应用数学。它二战后从军事运筹起家，与管理科学、工业工程、控制论、理论计算机科学交叉。</p>
+
+<table>
+  <thead><tr><th>专业</th><th>本科是否遇到</th><th>课程名</th></tr></thead>
+  <tbody>
+    <tr><td>数学（应用/计算数学）</td><td>是，核心课</td><td>最优化方法、运筹学</td></tr>
+    <tr><td>管理科学/工程管理</td><td>是，核心课</td><td>运筹学</td></tr>
+    <tr><td>工业工程</td><td>是</td><td>运筹学、生产调度</td></tr>
+    <tr><td>土木/交通工程</td><td>常见</td><td>运筹学（网络规划、交通分配）</td></tr>
+    <tr><td><b>计算机/软件工程</b></td><td><b>基本没有</b></td><td>只在算法课学 DP</td></tr>
+  </tbody>
+</table>
+
+<p>两个补充原因：① <strong>名字障眼法</strong>——课程叫「运筹学」不叫「优化」；② <strong>年代感</strong>——现代凸优化叙事（Boyd《Convex Optimization》2004）大规模进国内课堂是 2010 年代且集中在研究生层，它真正「出圈」是被机器学习带火的（训练神经网络、SVM、正则化回归全是优化问题）。</p>
+
+<!-- ===================================================== -->
+<h2 id="c9">9. 核心主线：建模 → 凸性 → 对偶下界 → 评分</h2>
+
+<p>这条链在回答一个问题：<strong>「我怎么知道我的算法给出的方案，是恰好最优，还是浪费了一堆？」</strong>四步各管一段，全程用二通西路南口走通。</p>
+
+<h3>9.1 第一步：LP 建模</h3>
+
+<p>见 2.3 节——把「安排绿灯」翻译成三要素：变量（各阶段时长）、约束（车流只认总量）、目标（总时长最短）。<strong>建模决定后面一切是否有意义</strong>：如果约束写错（比如把西直写成「两段各自 ≥ 48.5」），地板和高度就都在量一个错误的东西。</p>
+
+<h3>9.2 第二步：凸性保证</h3>
+
+<p>可行域：<var>t</var>₁ ≥ 58.8（竖线右侧）∩ <var>t</var>₂ ≥ 6.0（横线上方）∩ <var>t</var>₁+<var>t</var>₂ ≥ 48.5（斜线右上）= 朝右上张开的角——标准碗形。目标 <var>t</var>₁+<var>t</var>₂ 的等高线是斜率 −1 的平行线，往左下推。凸性的作用一句话：<strong>碗形可行域上「推不动了」就是「全宇宙最低」</strong>——不存在隔壁更深的坑。这是后面一切信任的地基。</p>
+
+<h3>9.3 第三步：对偶 = 下界（不解题，先掐底）</h3>
+
+<p>整条链最反直觉的一跳。换视角：</p>
+<ul>
+  <li><strong>正面（原问题）</strong>：构造一个具体方案让总时长尽量小 → 得到「<strong>我能做到</strong>」的数；</li>
+  <li><strong>反面（对偶问题）</strong>：不构造任何方案，只找一个<strong>理由</strong>证明「任何方案的总时长 ≥ 某个数」 → 得到「<strong>谁也逃不掉</strong>」的数。</li>
+</ul>
+
+<p><strong>找理由的技巧简单到离谱：把约束加起来。</strong>把第 1 条和第 3 条约束直接相加：</p>
+
+<div class="formula">
+  <span class="brace">(</span><var>t</var>₁ ≥ 58.8<span class="brace">)</span> + <span class="brace">(</span><var>t</var>₂ ≥ 6.0<span class="brace">)</span>&nbsp;⇒&nbsp; <var>t</var>₁ + <var>t</var>₂ ≥ 64.8
+  <span class="cmt">左边恰好是目标函数——一行方案都没写就掐住了它的底</span>
+</div>
+
+<p>人话版：东直 58.8 秒和西左 6.0 秒是<strong>两份互不相干的活儿</strong>（一个必须 S1 干、一个必须 S2 干），不管你多聪明地挪西直，这两份活儿本身就要占 64.8 秒。<strong>下界 = 无论如何逃不掉的工作量。</strong></p>
+
+<p>「对偶问题」就是把这招系统化：给每条约束配一个非负权重 λ，加权组合后左边若恰好覆盖目标函数，右边就得到一个下界；然后问「权重怎么选，挤出来的下界最大」。本例最优对偶解就是 λ₁=1, λ₂=0, λ₃=1（取约束 1 和 3，丢弃约束 2——西直那条约束因为可以被别人顺带满足，不构成额外的「逃不掉」）。</p>
+
+<div class="box ok">
+  <div class="box-title">强对偶定理（靠凸性成立）</div>
+  <p>挤出来的最好下界 = 正面构造的最好方案——两条路殊途同归。这就是我们敢叫它 <strong>T_min（精确最低）</strong>而不只是「某个估计」的原因。非凸时两面之间有缝，下界会失效为「太松」——凸性是「对偶掐的底恰好能被正面达到」的前提。</p>
+</div>
+
+<h3>9.4 第四步：用下界给算法评分</h3>
+
+<p>现在手上有两个数，来自两个相反的方向：</p>
+
+<table>
+  <thead><tr><th>数</th><th>来自</th><th>含义</th><th>二通西路南口</th></tr></thead>
+  <tbody>
+    <tr><td><b>T_min</b></td><td>反面（对偶）</td><td><b>地板</b>：任何方案都逃不掉的量</td><td>64.8</td></tr>
+    <tr><td><b>W_algo</b></td><td>正面（任何算法）</td><td><b>你实际站的高度</b></td><td>引擎等分 83.1 / 贪心 64.8</td></tr>
+  </tbody>
+</table>
+
+<p><strong>评分 = 高度 − 地板 = 该算法的浪费量。</strong></p>
+
+<pre><code>引擎等分 W_eq = 83.1  →  浪费 (83.1−64.8)/64.8 = 28%   ← ÷stageCount 稀释的代价
+贪心规则      = 64.8  →  浪费 0%                      ← 恰好踩在地板上，无需更好算法</code></pre>
+
+<p>对比 CHAIN 拓扑的坏案例（来广营北路与顺白路 plan1）：贪心 160.2，地板 140.4 → 浪费 14%。没有地板时只知道贪心输出了 160.2——好是坏无从谈起；有了地板，14% 直接告诉你「这个拓扑上贪心不够好，这里才值得上 LP 精确解」。<strong>贪心这类快速直觉算法天生不知道自己差多少，下界是唯一免费的裁判。</strong></p>
+
+<div class="box">
+  <div class="box-title">四步一句话版</div>
+  <p>把配时<strong>翻译成</strong>最短总时长+覆盖约束的 LP（建模）；这道题是碗形的，<strong>保证</strong>一次解对且正反两面严丝合缝（凸性）；不解题也能<strong>掐底</strong>——把约束加起来就证明总时长逃不过 64.8（对偶=下界=逃不掉的工作量）；于是任何快速算法的成绩单 = 它的输出离地板多远（评分）。</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c10">10. 这条主线如何改变了工程决策</h2>
+
+<p>工具就位后，我们对三个灰度目录 455 份回放 JSON 里的 <strong>357 个搭接 plan（220 个去重路口）</strong>做了全量三口径对比（W_eq 等分 / W_greedy 贪心 / T_min LP 下界）：</p>
+
+<table>
+  <thead><tr><th>拓扑</th><th>plan 数</th><th>贪心达 LP 下界</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td>SINGLE</td><td>204</td><td>100%</td><td>闭式安全，无需 LP</td></tr>
+    <tr><td>CO-CORE</td><td>48</td><td>94%</td><td>安全子集，可回收增益中位 9.8%</td></tr>
+    <tr><td>PURE-EXT</td><td>54</td><td>76%</td><td>藏 92% gap 灾难案例（双翼汇入结构），缓行</td></tr>
+    <tr><td>CHAIN</td><td>51</td><td>69%</td><td>顺序敏感，需显式定序或 LP</td></tr>
+  </tbody>
+</table>
+
+<p>理论-实测闭环：三相位结构（CO-CORE 原型）的理论预测「轴权重虚高 7-33%」，实测中位 <strong>9.8%</strong>，正落在预测区间内。最终产出分层灰度路径：第一批 SINGLE+CO-CORE（顺序无关、达下界），第三批 CHAIN（配定序约定）。</p>
+
+<div class="box ok">
+  <div class="box-title">方法论的胜利</div>
+  <p>没有这套数学工具时，只能对每个路口逐案争论「这个分配合理吗」；有了 LP 下界这个裁判，357 个 plan 的「谁最优、谁浪费、浪费多少」变成一行可复算的数字。<strong>这正是「学好数学的作用」最具体的形态：不是算得更快，而是把『我觉得』变成『我证明』。</strong></p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="c11">11. 缩写与人名速查表</h2>
+
+<h3>11.1 优化问题类别（按难度递进）</h3>
+<table>
+  <tbody>
+    <tr><td><b>LP</b></td><td>Linear Programming</td><td>线性规划</td></tr>
+    <tr><td><b>NLP</b></td><td>Nonlinear Programming</td><td>非线性规划</td></tr>
+    <tr><td><b>QP</b></td><td>Quadratic Programming</td><td>二次规划</td></tr>
+    <tr><td><b>SOCP</b></td><td>Second-Order Cone Programming</td><td>二阶锥规划</td></tr>
+    <tr><td><b>IP</b></td><td>Integer Programming</td><td>整数规划</td></tr>
+    <tr><td><b>MIP</b></td><td>Mixed-Integer Programming</td><td>混合整数规划</td></tr>
+    <tr><td><b>MINLP</b></td><td>Mixed-Integer Nonlinear Programming</td><td>混合整数非线性规划（最难档）</td></tr>
+  </tbody>
+</table>
+
+<h3>11.2 算法与理论</h3>
+<table>
+  <tbody>
+    <tr><td><b>DP</b></td><td>Dynamic Programming</td><td>动态规划（求解范式）</td></tr>
+    <tr><td><b>SGD</b></td><td>Stochastic Gradient Descent</td><td>随机梯度下降</td></tr>
+    <tr><td><b>NP-hard</b></td><td>Non-deterministic Polynomial-time hard</td><td>难度标签：至少和 NP 最难问题一样难</td></tr>
+    <tr><td><b>SVM / MDP / TSP</b></td><td>Support Vector Machine / Markov Decision Process / Traveling Salesman Problem</td><td>应用领域经典问题</td></tr>
+  </tbody>
+</table>
+
+<h3>11.3 人名（都不是缩写）</h3>
+<table>
+  <tbody>
+    <tr><td><b>Dantzig</b></td><td>George Dantzig</td><td>1947 单纯形法，LP 奠基人</td></tr>
+    <tr><td><b>Bellman</b></td><td>Richard Bellman</td><td>动态规划之父</td></tr>
+    <tr><td><b>Dijkstra</b></td><td>Edsger Dijkstra</td><td>最短路算法（本质是按阶段推进的 DP）</td></tr>
+    <tr><td><b>Webster</b></td><td>F.V. Webster</td><td>经典信号配时延误/周期公式冠名人</td></tr>
+    <tr><td><b>Boyd</b></td><td>Stephen Boyd</td><td>《Convex Optimization》作者，现代凸优化普及者</td></tr>
+    <tr><td><b>Hessian</b></td><td>得名于 Otto Hesse</td><td>黑塞矩阵：二阶偏导矩阵，凸性判定工具</td></tr>
+  </tbody>
+</table>
+
+<h3>11.4 本项目自造记号（非通用术语）</h3>
+<table>
+  <tbody>
+    <tr><td><b>T_min</b></td><td>LP 覆盖约束的最小总时长（理论下界，裁判）</td></tr>
+    <tr><td><b>W_eq</b></td><td>引擎现状口径（÷stageCount 等分）的总权重</td></tr>
+    <tr><td><b>W_greedy</b></td><td>贪心规则（先蹭独占、余量进边际最小落点）的总权重</td></tr>
+    <tr><td><b>W_clear</b></td><td>清空时间机制（拓扑序+串行消散）移植后的总权重</td></tr>
+    <tr><td><b>SINGLE / CO-CORE / CHAIN / PURE-EXT</b></td><td>搭接拓扑分类（单搭接 / 共享核心 / 错位共享 / 纯延伸段）</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================================================== -->
+<h2 id="c12">12. 继续学习的路径</h2>
+
+<p>按性价比排序：</p>
+<ol>
+  <li><strong>Boyd《Convex Optimization》</strong>（斯坦福，配套公开课免费）——凸优化的事实标准教材，前几章覆盖凸集/凸函数/LP/QP/SOCP 全部概念，工程友好；</li>
+  <li>国内教材：清华《运筹学》或陈宝林《最优化理论与算法》——更贴合运筹学课程体系，单纯形法与对偶理论讲得细；</li>
+  <li>不必啃大部头：把本文第 9 节的主线（建模 → 凸性 → 对偶掐底 → 评分）想透，已经覆盖做配时系统所需的大部分。</li>
+</ol>
+
+<blockquote>
+  <p><strong>学科知识最好的入口从来是手头的工程问题。</strong>这次搭接归因把一个 Java 工程师领进了运筹学的门——按需学习，比按课表学习记得牢。</p>
+</blockquote>
+
+<hr>
+
+<p class="footnote">
+  相关文档：<code>docs/overlap-flow-attribution-discussion.html</code>（搭接分摊问题本体）·
+  <code>docs/analysis-domain-modeling.md</code>（领域建模分析）·
+  扫描脚本 <code>scripts/overlap_topology_scan.py</code> / <code>scripts/overlap_clear_time_mode.py</code><br>
+  本文案例数据取自灰度回放：二通西路南口（5121408929630257270 plan1）、来广营北路与顺白路（628255166529 plan1）。
+</p>
+
+</div>
+</body>
+</html>
