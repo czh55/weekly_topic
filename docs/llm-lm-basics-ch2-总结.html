@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 2 章学习笔记 · 语言模型基础</title>
+<style>
+  :root{
+    --ink:#1f2937; --sub:#6b7280; --bg:#f6f7f9; --card:#ffffff; --line:#e5e7eb;
+    --blue:#2563eb; --purple:#7c3aed; --cyan:#0891b2; --amber:#d97706; --red:#dc2626; --green:#059669;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,sans-serif;
+       color:var(--ink); background:var(--bg); line-height:1.75; font-size:16px}
+  .wrap{max-width:920px; margin:0 auto; padding:0 20px}
+  nav{position:sticky; top:0; z-index:50; background:rgba(255,255,255,.95); border-bottom:1px solid var(--line);
+      backdrop-filter:blur(6px)}
+  nav .wrap{display:flex; gap:4px; overflow-x:auto; padding:10px 20px}
+  nav a{flex-shrink:0; padding:6px 14px; border-radius:999px; color:var(--sub); text-decoration:none; font-size:14px; white-space:nowrap}
+  nav a:hover{background:#eef2f7; color:var(--ink)}
+  header{padding:48px 0 20px}
+  .key{background:linear-gradient(135deg,#1e293b,#334155); color:#fff; border-radius:18px; padding:30px 30px}
+  .key h1{font-size:25px; margin-bottom:6px}
+  .key .sub{color:#cbd5e1; font-size:14px; margin-bottom:18px}
+  .key .sub a{color:#93c5fd}
+  .key .q{background:rgba(255,255,255,.1); border-left:4px solid var(--amber); padding:13px 18px; border-radius:8px;
+          font-size:15.5px}
+  .key .q b{color:#fbbf24}
+  section{padding:26px 0 6px}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px}
+  .sec-no{font-size:13px; font-weight:700; color:#fff; background:var(--ink); border-radius:6px; padding:2px 10px; letter-spacing:1px}
+  h2{font-size:22px}
+  .lead{color:var(--sub); font-size:14.5px; margin-bottom:18px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 24px; margin-bottom:16px}
+  h3{font-size:17px; margin-bottom:10px}
+  h4{font-size:15px; margin:14px 0 6px}
+  p{margin-bottom:8px}
+  .dim{color:var(--sub); font-size:14px}
+  .cl{display:block}
+  .cl+.cl{margin-top:3px}
+  .callout{border-left:4px solid var(--blue); background:#eff6ff; border-radius:0 10px 10px 0; padding:12px 16px; margin:12px 0; font-size:14.5px}
+  .callout.amber{border-color:var(--amber); background:#fffbeb}
+  .callout.green{border-color:var(--green); background:#ecfdf5}
+  .codeblk{background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px;
+           line-height:1.7; color:#334155; overflow-x:auto; margin:10px 0}
+  table{width:100%; border-collapse:collapse; font-size:14px; margin:10px 0}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top}
+  th{background:#f3f4f6; font-weight:600}
+  .num{font-variant-numeric:tabular-nums; white-space:nowrap}
+  .memwrap{margin-top:14px}
+  .ppl-lab{display:flex; gap:14px; align-items:center; flex-wrap:wrap; background:#fbfcfe;
+           border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-top:10px}
+  .ppl-lab input[type=range]{flex:1; min-width:180px; accent-color:var(--amber)}
+  .ppl-out{font-size:14px; font-weight:600}
+  .ppl-out b{color:var(--amber)}
+  .mask-scroll{overflow-x:auto; margin:12px 0}
+  .mask-tbl{min-width:620px; margin:0; font-size:12.5px; text-align:center}
+  .mask-tbl th,.mask-tbl td{padding:5px 6px; text-align:center; white-space:nowrap}
+  .mask-tbl .rowhead{text-align:left; font-weight:600; background:#f8fafc}
+  .mask-tbl .allow{background:#ecfdf5; color:var(--green); font-weight:700}
+  .mask-tbl .self{background:#dbeafe; color:var(--blue); font-weight:700}
+  .mask-tbl .blocked{background:#f8fafc; color:#cbd5e1}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--sub); margin-top:8px}
+  .legend span{display:flex; align-items:center; gap:5px}
+  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block}
+  .prob-chart{border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:12px 0; background:#fbfcfe}
+  .prob-row{display:grid; grid-template-columns:48px 1fr 48px; gap:10px; align-items:center; margin:7px 0; font-size:13.5px}
+  .prob-row .pval{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
+  .prob-track{height:20px; background:#eef2f7; border-radius:5px; overflow:hidden}
+  .prob-fill{height:100%; border-radius:5px}
+  .p-blue{background:var(--blue)} .p-orange{background:var(--amber)} .p-gray{background:#94a3b8}
+  .mode-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:12px; margin:12px 0}
+  .mode-card{border:1px solid var(--line); border-top:4px solid var(--blue); border-radius:12px; padding:14px 16px; background:#fff}
+  .mode-card.score{border-top-color:var(--amber)} .mode-card.train{border-top-color:var(--green)}
+  .mode-card h4{margin:0 0 8px; font-size:16px}
+  .mode-card .flow{font-size:13.5px; line-height:1.85}
+  .mode-card .flow b{color:var(--blue)} .mode-card.score .flow b{color:var(--amber)} .mode-card.train .flow b{color:var(--green)}
+  .seq{display:flex; gap:4px; flex-wrap:wrap; align-items:center; margin:8px 0}
+  .tok{padding:3px 8px; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:6px; font-size:13px}
+  .tok.target{border-color:#fcd34d; background:#fffbeb; color:#b45309; font-weight:700}
+  .tok.generated{border-color:#a7f3d0; background:#ecfdf5; color:#047857; font-weight:700}
+  .tok.future{border-style:dashed; border-color:#cbd5e1; background:#f8fafc; color:#94a3b8}
+  footer{padding:26px 0 46px; color:var(--sub); font-size:13px}
+  footer a{color:var(--blue)}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a href="#map">本章地图</a>
+  <a href="#q1">① 思考强度</a>
+  <a href="#q2">② 方式一</a>
+  <a href="#q3">③ CE 与 PPL</a>
+  <a href="#q4">④ gram 词源</a>
+  <a href="#q5">⑤ 遮罩与三种用法</a>
+  <a href="./">← 返回每周主题墙</a>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="key">
+    <h1>第 2 章学习笔记:语言模型基础</h1>
+    <div class="sub">教材 <a href="https://jiejin93.github.io/llm-textbook/ch02.html">ch02</a> · 承接 <a href="https://jiejin93.github.io/llm-textbook/ch01.html">第 1 章《从词向量到 GPT》</a> · 前作 <a href="llm-math-ch0-总结.html">第 0 章笔记</a> · 2026-10-21 起逐问增补</div>
+    <div class="q">本章把"模型 = P(w<sub>t</sub> | w<sub>&lt;t</sub>)"变成<b>可计算、可训练、可评测、可采样</b>的对象。
+      本页记录学习中的提问与解答:思考强度 / 方式一 / 交叉熵与困惑度 / gram 词源 / 遮罩与三种用法。</div>
+  </div>
+</div></header>
+
+<section id="map"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">地图</span><h2>五个问题,各对应教材哪一节</h2></div>
+  <div class="card">
+    <table>
+      <tr><th style="width:64px">问题</th><th>教材位置</th><th>一句话答案</th></tr>
+      <tr><td class="num">①</td><td>2.6 解码策略(产品旋钮,教材之外)</td><td>思考强度管"想多久",温度/top-k/top-p 管"每步怎么挑词"——两族旋钮,正交</td></tr>
+      <tr><td class="num">②</td><td>2.7 语言模型的两种使用方式</td><td>评测与 RLHF 的关键计算是"给已有文本打分"(方式一),不是写新文本(方式二)</td></tr>
+      <tr><td class="num">③</td><td>2.4 交叉熵与困惑度</td><td>不是取代关系:PPL = e^(平均交叉熵),同一量的两种刻度;训练用 CE,汇报看 PPL</td></tr>
+      <tr><td class="num">④</td><td>2.3 n-gram</td><td>gram 源自希腊语"文字/书写物",n-gram = n 个连续书写单元的片段</td></tr>
+      <tr><td class="num">⑤</td><td>2.1 概率分解 + 2.4 训练 + 2.6/2.7 使用</td><td>同一段文本、同一种遮罩:生成负责选词,打分负责记账,训练负责记账后更新权重</td></tr>
+    </table>
+  </div>
+</div></section>
+
+<section id="q1"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">问题 ①</span><h2>思考强度,和温度 / top-k / top-p 是什么关系</h2></div>
+  <div class="card">
+    <div class="callout amber" style="margin-top:0"><b>核心答案:两族旋钮,各管一段,互不替代。</b>
+      思考强度管<b>想多久</b>(生成预算:思考链多长);温度 / top-k / top-p 管<b>每一步怎么从分布里挑词</b>(采样规则)。</div>
+    <table>
+      <tr><th style="width:110px">旋钮</th><th>管什么</th><th>作用点</th><th>白话</th></tr>
+      <tr><td><b>思考强度</b></td><td>思考链长度 / 推理预算</td><td>整个生成过程(总共产出多少思考 token)</td><td>先想再答,想多久</td></tr>
+      <tr><td><b>温度 τ</b></td><td>分布形状</td><td>每一步采样前,logits 除以 τ 再过 softmax</td><td>τ&lt;1 拉尖(接近贪心),τ&gt;1 拉平(更随机)</td></tr>
+      <tr><td><b>top-k</b></td><td>候选个数</td><td>每一步采样时,只留概率前 k 个</td><td>硬砍长尾,砍多少个</td></tr>
+      <tr><td><b>top-p</b></td><td>候选累计概率</td><td>每一步采样时,留到累计概率达 p 的最小集合</td><td>核大小自适应:模型笃定核就小,犹豫核就大</td></tr>
+    </table>
+    <p style="margin:0">
+      <span class="cl"><b>怎么配合</b>:思考强度<b>不改变分布形状</b>;温度/top-k/top-p 照样作用于思考链与最终回答的每一个采样步。</span>
+      <span class="cl"><b>组合效果</b>:高思考 + 低温度 = 长而稳;低思考 + 高温度 = 短而发散。</span>
+      <span class="cl"><b>钉到 2.7 节</b>:这四个全是<b>方式二(生成)</b>的旋钮;方式一(打分)不采样,温度/top-k/top-p 用不上,也没有"思考"可言。</span>
+      <span class="cl"><b>工程注</b>:解码策略只在推理期起作用,<b>不改模型权重</b>(教材 2.6.6);有的产品里"思考强度"还隐含"是否先思考"的开关,概念上都是推理预算。</span>
+    </p>
+  </div>
+</div></section>
+
+<section id="q2"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">问题 ②</span><h2>为什么评测与 RLHF 大量使用方式一</h2></div>
+  <div class="card">
+    <p style="margin-top:0">教材 2.7:同一个语言模型,被当作<b>两台不同的机器</b>用。</p>
+    <table>
+      <tr><th style="width:110px"></th><th>方式一:概率估计器(打分)</th><th>方式二:生成器(采样)</th></tr>
+      <tr><td><b>干什么</b></td><td>输入<b>完整序列</b>,输出它的对数似然或某位置的条件概率</td><td>反复"采样 → 拼回输入",自回归地产出<b>新文本</b></td></tr>
+      <tr><td><b>成本</b></td><td><b>一次前向</b>,所有位置概率并行出</td><td>T 个 token 要 <b>T 次前向</b>(串行,KV Cache 为削减重复计算而生)</td></tr>
+      <tr><td><b>用途</b></td><td>文本分类(比候选标签概率)、重排序、PPL 流畅度、RLHF 的逐 token 对数概率</td><td>对话、写作、代码补全</td></tr>
+    </table>
+    <p style="margin:0">
+      <span class="cl"><b>理由一 · 任务性质</b>:评测与 RLHF 的关键计算是<b>给已有文本打分</b>,不是写新文本。</span>
+      <span class="cl">· 评测:比较各候选答案续写的概率(选最大者),或算 PPL——本身就是方式一。</span>
+      <span class="cl">· RLHF(PPO/GRPO):对<b>已经生成好</b>的序列逐 token 算对数概率,用来估计策略梯度。</span>
+      <span class="cl"><b>理由二 · 便宜</b>:方式一一次前向全并行;方式二 T 次串行前向,贵得多。</span>
+      <span class="cl"><b>理由三 · 确定可比</b>:打分是确定数值,不掺采样随机性——只有确定的数才配当"度量"和训练信号。</span>
+    </p>
+    <div class="callout amber"><b>别误会</b>:RLHF 里"采样回答"(rollout)那一步确实用方式二;但"给回答算概率、算梯度信号"这一步用方式一——"大量"指的是后者。两台机器,底层是<b>同一个条件分布</b>。</div>
+  </div>
+</div></section>
+
+<section id="q3"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">问题 ③</span><h2>交叉熵损失与困惑度:是取代关系吗,训练用谁</h2></div>
+  <div class="card">
+    <div class="callout amber" style="margin-top:0"><b>核心答案:不是取代,是同一个量的两种刻度。</b>
+      PPL = e<sup>(平均交叉熵)</sup>。训练时反向传播用<b>交叉熵</b>,监控与汇报看<b>困惑度</b>——训练日志里那两个数,其实是同一个东西。</div>
+    <pre class="codeblk">每个位置:  CE = −log P(真实下一词)        // 单位 nats
+整段文本:  PPL = exp(所有位置的平均 CE)   // 把对数刻度翻译回"候选个数"</pre>
+    <p style="margin:0">
+      <span class="cl"><b>白话对照</b>:交叉熵是<b>对数刻度</b>的损失;困惑度把它翻译回人话——"每一步等效在<b>多少个候选</b>里均匀犹豫"。</span>
+      <span class="cl">PPL = 1:每步都完美确定;PPL = k:等效在 k 个词里均匀犹豫;随机模型 PPL ≈ 词表大小 |V|。</span>
+      <span class="cl"><b>数学上</b>:exp 严格递增,所以"降 CE"就是"降 PPL"——选谁当优化目标,结果等价。</span>
+      <span class="cl"><b>工程上</b>:直接用 CE。它是可微的原始损失,梯度形式极简(softmax 概率 − one-hot);没必要再套一层 exp,那只会放大数值、增加溢出风险。</span>
+    </p>
+    <h4>同一组数,两种读法(拖动滑块感受)</h4>
+    <div class="ppl-lab">
+      <input type="range" id="ceSlider" min="0.1" max="12" step="0.1" value="4">
+      <div class="ppl-out">平均 CE = <b id="ceVal">4.0</b> nats → PPL = <b id="pplVal">54.6</b><span class="dim" id="pplNote"></span></div>
+    </div>
+    <table>
+      <tr><th>平均交叉熵(nats)</th><th>PPL</th><th>白话</th></tr>
+      <tr><td class="num">1.0</td><td class="num">2.7</td><td>不到 3 个候选里犹豫</td></tr>
+      <tr><td class="num">2.0 ~ 3.0</td><td class="num">7.4 ~ 20</td><td>好的现代模型在自然文本上的常见区间(个位数到十几)</td></tr>
+      <tr><td class="num">4.0</td><td class="num">55</td><td>在约 55 个候选里犹豫</td></tr>
+      <tr><td class="num">10.82</td><td class="num">≈ 50,000</td><td>词表 5 万时的<b>随机模型基线</b>(PPL ≈ |V|)</td></tr>
+    </table>
+    <p class="dim" style="margin:0">
+      <span class="cl">注意一:PPL 只在<b>同一分词器 + 同一数据集</b>下可比——不同词表的"每 token 熵"不能直接比。</span>
+      <span class="cl">注意二:PPL 低 ≠ 生成质量高——背下训练集的模型 PPL 极低,但毫无用处;最终评测仍需任务级指标。</span>
+    </p>
+  </div>
+</div></section>
+
+<section id="q4"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">问题 ④</span><h2>n-gram 里的 gram 是什么含义</h2></div>
+  <div class="card">
+    <p style="margin:0">
+      <span class="cl"><b>词源</b>:gram 来自希腊语 <b>gramma</b>(文字、书写的东西);后缀 -gram = "写出来的东西 / 一条记录"。</span>
+      <span class="cl">同款词:telegram = tele(远)+ gram(文字)→ 远方来的文字 = <b>电报</b>;diagram = <b>图</b>。</span>
+      <span class="cl"><b>在 n-gram 里</b>:gram = <b>一个书写单元</b>(词或字);n-gram = <b>n 个连续单元组成的片段</b>,n 叫阶数。bigram = 2 个,trigram = 3 个。</span>
+      <span class="cl"><b>不是</b> grammar(语法),也不是重量单位"克"。</span>
+    </p>
+    <table>
+      <tr><th style="width:110px">例句「猫 追 了 老鼠」</th><th>切出的片段</th></tr>
+      <tr><td><b>bigram(2 阶)</b></td><td>(猫,追) (追,了) (了,老鼠)</td></tr>
+      <tr><td><b>trigram(3 阶)</b></td><td>(猫,追,了) (追,了,老鼠)</td></tr>
+    </table>
+    <p class="dim" style="margin:0">
+      <span class="cl">钉回教材 2.3:n-gram 模型只看最近 n−1 个词(马尔可夫假设),用<b>计数</b>估条件概率——绝大多数组合没见过,这就是"稀疏性"。</span>
+      <span class="cl">也正是第 1 章 NNLM 用分布式表示补的那个漏,见 <a href="https://jiejin93.github.io/llm-textbook/ch01.html">教材第 1 章</a>。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>马尔可夫假设 + 最大似然计数:n-gram 的概率表是怎么填出来的</h3>
+    <div class="callout" style="margin-top:0"><b>核心答案:马尔可夫假设负责"把看多长的历史砍短",最大似然计数负责"用语料出现次数把概率填出来"。两者合起来就是 n-gram 模型。</b></div>
+    <pre class="codeblk">完整前文:    P(wₜ | w₁,…,wₜ₋₁)                    // 历史随句子无限变长
+马尔可夫截断: P(wₜ | 最近 n−1 个词)                  // 把历史硬砍到固定长度
+最大似然计数: P(wₜ | h) = C(h, wₜ) / C(h)           // 出现频率直接当概率</pre>
+    <p style="margin:0">
+      <span class="cl"><b>马尔可夫假设</b>:来自马尔可夫性质"未来只取决于当前状态";在 n-gram 里,当前状态 = 最近 n−1 个词,更早的历史全部丢掉。</span>
+      <span class="cl"><b>最大似然估计(MLE)</b>:选一组概率参数,使训练语料出现的概率最大;对 n-gram,解就是"接在历史 h 后面的频率"。</span>
+    </p>
+    <h4>n 越大,看得越远</h4>
+    <table>
+      <tr><th style="width:110px">模型</th><th class="num">n</th><th>预测时看的历史</th><th>例子</th></tr>
+      <tr><td><b>unigram</b></td><td class="num">1</td><td>不看历史</td><td>P(苹果)</td></tr>
+      <tr><td><b>bigram</b></td><td class="num">2</td><td>最近 1 个词</td><td>P(苹果 | 吃)</td></tr>
+      <tr><td><b>trigram</b></td><td class="num">3</td><td>最近 2 个词</td><td>P(苹果 | 想 吃)</td></tr>
+      <tr><td><b>完整语言模型</b></td><td class="num">不截断</td><td>全部前文</td><td>P(苹果 | 我 今天 想 吃)</td></tr>
+    </table>
+    <h4>最大似然计数:数数就是求最大似然</h4>
+    <table>
+      <tr><th>语料统计项</th><th class="num">次数</th><th>由此估出的条件概率</th></tr>
+      <tr><td>"我 吃"总共出现</td><td class="num">50</td><td>—</td></tr>
+      <tr><td>"我 吃 苹果"出现</td><td class="num">10</td><td class="num">P(苹果|我 吃) = 10/50 = <b>0.2</b></td></tr>
+      <tr><td>"我 吃 面条"出现</td><td class="num">30</td><td class="num">P(面条|我 吃) = 30/50 = <b>0.6</b></td></tr>
+      <tr><td>"我 吃"后接其他</td><td class="num">10</td><td class="num">P(其他|我 吃) = 10/50 = <b>0.2</b></td></tr>
+    </table>
+    <p class="dim" style="margin:0">
+      <span class="cl"><b>为什么数数 = 最大似然</b>:设 p = P(苹果|我 吃),50 次里 10 次接苹果,似然 L(p) = p¹⁰(1−p)⁴⁰;让它最大的 p 正好是 10/50 = 0.2。</span>
+    </p>
+    <h4>两个部件各干什么 + 代价</h4>
+    <table>
+      <tr><th style="width:130px">部件</th><th>解决的问题</th><th>代价</th></tr>
+      <tr><td><b>马尔可夫假设</b></td><td>前文太长、组合爆炸——词表 5 万、看 5 个词的历史就有 50000⁶ ≈ 1.5×10²⁷ 种组合</td><td>窗口外的信息看不见:长距离依赖(如句首的"猫")丢失</td></tr>
+      <tr><td><b>最大似然计数</b></td><td>概率从哪来——直接数频率,快、可解释、数据少也能跑</td><td>没见过的组合计数为 0,概率为 0,整句概率归零(稀疏性)</td></tr>
+    </table>
+    <p style="margin:0">
+      <span class="cl"><b>使用场景</b>:神经网络之前用于语音识别候选打分、输入法/拼写纠错、早期机器翻译流畅度、文本检索;马尔可夫假设本身还用在 HMM、马尔可夫链、强化学习 MDP。</span>
+      <span class="cl"><b>与 GPT 的分界</b>:GPT 不做硬截断,在上下文窗口内看完整前文,靠 attention 自己学"哪些前文词重要";n-gram 是人工规定"只看最近几个词"。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>似然是什么:定义、原则、算法,三层别混</h3>
+    <div class="callout" style="margin-top:0"><b>核心答案:似然 = 给每组参数打的"解释数据能力"的分数(定义);最大似然 = 选最高分的规则(原则);交叉熵训练 = 用梯度实现这条规则(算法)。</b></div>
+    <p style="margin-top:0">同一个函数 L(θ) = P(数据 | θ),两种读法:</p>
+    <table>
+      <tr><th style="width:110px"></th><th>概率</th><th>似然</th></tr>
+      <tr><td><b>已知</b></td><td>参数(如:骰子均匀)</td><td>数据(如:10 次里 6 出现 4 次)</td></tr>
+      <tr><td><b>变量</b></td><td>数据</td><td>参数</td></tr>
+      <tr><td><b>回答</b></td><td>"会出现什么结果?"</td><td>"哪个参数更像真的?"</td></tr>
+      <tr><td><b>白话</b></td><td>顺着假设推现象</td><td>顺着现象反推假设(侦探破案思维)</td></tr>
+    </table>
+    <p style="margin:0">
+      <span class="cl"><b>似然 ≠ 概率分布</b>:所有参数的似然加起来不等于 1,它只在候选参数之间<b>比大小</b>时有用。</span>
+      <span class="cl"><b>骰子例</b>:10 次出 4 个 6——均匀骰子 L≈0.00054,动过手脚(每次 0.4)的骰子 L≈0.00119,后者似然更高,更像真的。</span>
+    </p>
+    <h4>哪些是假设,哪些不是</h4>
+    <table>
+      <tr><th>内容</th><th>性质</th></tr>
+      <tr><td>数据样本相互独立</td><td><b>假设</b></td></tr>
+      <tr><td>模型族是 n-gram 表 / 神经网络</td><td><b>假设</b>(规定候选参数长什么样)</td></tr>
+      <tr><td>只看最近 n−1 个词</td><td><b>假设</b>(马尔可夫截断)</td></tr>
+      <tr><td>整句概率拆成 ∏ₜ P(xₜ | xₜ₋₁…)</td><td><b>不是假设</b>:链式法则,恒等式</td></tr>
+      <tr><td>CE = −(1/N)·log L(θ)</td><td><b>不是假设</b>:公式推导</td></tr>
+    </table>
+    <h4>自回归训练就是在最大化似然</h4>
+    <pre class="codeblk">log L(θ) = Σₜ log P_θ(xₜ | xₜ₋₁…)
+CE      = −(1/N)·log L(θ)          // 最小化 CE = 最大化对数似然
+
+n-gram:   有闭式解 → 直接数数 C(h,w)/C(h)
+神经网络:  没有闭式解 → 反向传播 + 梯度下降,一点点爬向似然更高处</pre>
+    <p style="margin:0">
+      <span class="cl"><b>不是"训练本身就能做到似然"</b>,而是:自回归训练<b>就是</b>在最大化似然,只是解法从"数数"换成了"梯度"。</span>
+      <span class="cl"><b>限制</b>:最大似然只在模型族内挑最好的——bigram 即使最优也看不见句首的"猫";数学上等价于最小化数据分布与模型分布的 KL 散度。</span>
+    </p>
+  </div>
+</div></section>
+
+<section id="q5"><div class="wrap">
+  <div class="sec-head"><span class="sec-no">问题 ⑤</span><h2>同一段文本,生成 / 打分 / 训练到底差在哪</h2></div>
+  <div class="lead">总钥匙:不是有三套模型,而是同一个条件分布的三种用法;因果遮罩始终在场,改变的是"算完概率以后做什么"。</div>
+
+  <div class="card">
+    <h3>同一段文本:答案写在输入里,也不能偷看未来</h3>
+    <div class="callout" style="margin-top:0"><b>核心:因果遮罩遮的是 attention 的信息通道,不是删除文本。</b>每个位置只能读自己和左边,再用这份左侧信息预测右边一个 token。</div>
+    <div class="seq" aria-label="示例序列">
+      <span class="tok">中</span><span class="tok">国</span><span class="tok">的</span><span class="tok">首</span><span class="tok">都</span><span class="tok">是</span><span class="tok target">上</span><span class="tok target">海</span>
+    </div>
+    <p class="dim">为把图画清楚,这里假设一个汉字就是一个 token;真实模型由分词器切分。</p>
+    <h4>因果遮罩矩阵:每一行看"当前位置能读谁"</h4>
+    <div class="mask-scroll">
+      <table class="mask-tbl" id="maskTable">
+        <tr><th>当前位置 ↓</th><th>中</th><th>国</th><th>的</th><th>首</th><th>都</th><th>是</th><th>上</th><th>海</th></tr>
+        <tr><td class="rowhead">中</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">国</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">的</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">首</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">都</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">是</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">上</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td><td class="blocked">×</td></tr>
+        <tr><td class="rowhead">海</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="allow">✓</td><td class="self">自己</td></tr>
+      </table>
+    </div>
+    <div class="legend"><span><i class="swatch" style="background:#dbeafe"></i>蓝 = 当前位置自己</span><span><i class="swatch" style="background:#ecfdf5"></i>绿 = 左侧可见</span><span><i class="swatch" style="background:#f8fafc;border:1px solid #e5e7eb"></i>灰 × = 未来禁止</span></div>
+    <pre class="codeblk">scores  = Q·Kᵀ / √d_k       // 先算当前位置对所有位置的相关度
+scores[未来位置] = −∞        // softmax 之前下闸
+weights = softmax(scores)    // 未来位置权重变 0
+output  = weights·V          // 未来信息进不来</pre>
+    <p style="margin:0">
+      <span class="cl"><b>看"是"这一行</b>:它能读"中国的首都是",看不到"上海",所以可以给"上"公平打分。</span>
+      <span class="cl"><b>看"上"这一行</b>:它能读"中国的首都是上",看不到"海",所以可以给"海"公平打分。</span>
+      <span class="cl"><b>数学结果</b>:softmax(−∞) = 0;未来 token 仍在输入矩阵里,但 attention 分配给它的权重是 0。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>同一概率分布:模型首选"北",标准答案却是"上"</h3>
+    <p style="margin-top:0">在位置"是"上,模型读完 <b>中国的首都是</b>,输出下一 token 的条件概率分布:</p>
+    <div class="prob-chart" role="img" aria-label="北百分之七十,上百分之五,南百分之二,其他百分之二十三">
+      <div class="prob-row"><b>北</b><div class="prob-track"><div class="prob-fill p-blue" style="width:70%"></div></div><span class="pval">70%</span></div>
+      <div class="prob-row"><b>上</b><div class="prob-track"><div class="prob-fill p-orange" style="width:5%"></div></div><span class="pval">5%</span></div>
+      <div class="prob-row"><b>南</b><div class="prob-track"><div class="prob-fill p-gray" style="width:2%"></div></div><span class="pval">2%</span></div>
+      <div class="prob-row"><b>其他</b><div class="prob-track"><div class="prob-fill p-gray" style="width:23%"></div></div><span class="pval">23%</span></div>
+    </div>
+    <p style="margin:0">
+      <span class="cl"><b>符号钉死</b>:P(上 | 中国的首都是) = 0.05,是"上"的<b>条件概率</b>,不是前面整段 prompt 的概率。</span>
+      <span class="cl"><b>第一名与答案</b>:"北"是模型首选;"上"是已有文本里的真实下一 token。两者不一致时,三种用途走向三条路。</span>
+    </p>
+    <div class="mode-grid">
+      <div class="mode-card gen">
+        <h4>生成:没有标准答案,负责选</h4>
+        <div class="flow">
+          <span class="cl">输入:中国的首都是</span>
+          <span class="cl">↓ 贪心:选第一名<b>北</b></span>
+          <span class="cl">↓ 下一步可能续出<b>京</b></span>
+          <span class="cl"><b>不比较"上",不算 CE,不更新</b></span>
+        </div>
+      </div>
+      <div class="mode-card score">
+        <h4>打分:已有标准答案,负责记账</h4>
+        <div class="flow">
+          <span class="cl">输入:中国的首都是上海</span>
+          <span class="cl">↓ 不选"北",直接查<b>P(上)=0.05</b></span>
+          <span class="cl">↓ CE = −ln(0.05) = <b>3.00</b></span>
+          <span class="cl"><b>记下低分,不反向传播,不更新</b></span>
+        </div>
+      </div>
+      <div class="mode-card train">
+        <h4>训练:先记账,再改模型</h4>
+        <div class="flow">
+          <span class="cl">前向与打分相同,也得到 CE = <b>3.00</b></span>
+          <span class="cl">↓ 反向传播,计算梯度</span>
+          <span class="cl">↓ 优化器小幅更新权重</span>
+          <span class="cl"><b>类似上下文中提高"上"的分数</b></span>
+        </div>
+      </div>
+    </div>
+    <div class="callout amber"><b>正常对话为什么不会自动纠错?</b>生成时手里没有标准答案"上",就没有"不一致"可供比较;只有打分和训练把已有文本当目标。即使训练时第一名猜对,只要概率不是 100%,CE 仍会继续推动模型提高真实答案的概率。</div>
+  </div>
+
+  <div class="card">
+    <h3>一次前向为什么能算完整段:每个位置都在预测自己的下一词</h3>
+    <p style="margin-top:0">打分与训练使用 <b>teacher forcing(教师强制)</b>:每一步都把真实前缀给模型,不把模型刚才的首选接回去。</p>
+    <table>
+      <tr><th>要评的真实 token</th><th>遮罩后可用条件</th><th>模型给真实 token 的概率</th><th>此位置 CE</th></tr>
+      <tr><td><b>上</b></td><td>中国的首都是</td><td class="num">0.05</td><td class="num">−ln(0.05) ≈ 3.00</td></tr>
+      <tr><td><b>海</b></td><td>中国的首都是<b>上</b></td><td class="num">0.20</td><td class="num">−ln(0.20) ≈ 1.61</td></tr>
+    </table>
+    <div class="seq" aria-label="教师强制使用真实前缀">
+      <span class="dim">预测"海"时使用:</span><span class="tok">中</span><span class="tok">国</span><span class="tok">的</span><span class="tok">首</span><span class="tok">都</span><span class="tok">是</span><span class="tok target">上</span><span>→</span><span class="tok target">海</span>
+    </div>
+    <p class="dim">即使模型刚才最想要"北",给"海"打分时仍用真实的"上",不是用模型生成的"北"。</p>
+    <pre class="codeblk">候选"上海"的总对数概率 = ln(0.05) + ln(0.20) = ln(0.01) ≈ −4.605
+平均 CE = (3.00 + 1.61) / 2 ≈ 2.303
+候选 PPL = exp(2.303) = 10.0</pre>
+    <h4>总对照:同一段文本,差别全在概率算完以后</h4>
+    <table id="modeCompare">
+      <tr><th style="width:128px"></th><th>生成</th><th>给已有文本打分</th><th>训练</th></tr>
+      <tr><td><b>目的</b></td><td>产新文本</td><td>评价已有文本</td><td>让模型拟合已有文本</td></tr>
+      <tr><td><b>输入</b></td><td>prompt + 已生成前缀</td><td>prompt + 完整候选答案</td><td>完整训练文本</td></tr>
+      <tr><td><b>因果遮罩</b></td><td>有</td><td>有</td><td>有</td></tr>
+      <tr><td><b>概率算完后</b></td><td>选一个 token 接回输入</td><td>读取真实 token 的概率</td><td>读取真实 token 的概率</td></tr>
+      <tr><td><b>温度 / top-k / top-p</b></td><td>采样时参与</td><td>不参与</td><td>不参与</td></tr>
+      <tr><td><b>交叉熵</b></td><td>不算</td><td>算,作为分数</td><td>算,作为损失</td></tr>
+      <tr><td><b>反向传播 + 更新权重</b></td><td>没有</td><td><b>没有</b></td><td><b>有</b></td></tr>
+    </table>
+    <div class="callout green"><b>一句话钉死</b>:生成 = 前向 + 选词;打分 = 前向 + 记账;训练 = 前向 + 记账 + 反向传播 + 更新。三者都用因果遮罩,也都使用"前面 n 个 token → 下一个 token 的条件概率分布"。</div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  第 2 章学习笔记 · 2026-10-21 起逐问增补 · 配套:<a href="https://jiejin93.github.io/llm-textbook/ch01.html">第 1 章《从词向量到 GPT》</a> · <a href="./">返回每周主题墙</a> · 教材:<a href="https://jiejin93.github.io/llm-textbook/ch02.html">ch02 原文</a>
+</div></footer>
+
+<script>
+(function(){
+  const s=document.getElementById('ceSlider'),cv=document.getElementById('ceVal'),
+        pv=document.getElementById('pplVal'),nt=document.getElementById('pplNote');
+  function fmt(x){return x<10?x.toFixed(2):x<1000?x.toFixed(1):Math.round(x).toLocaleString('en-US');}
+  function upd(){
+    const L=parseFloat(s.value), p=Math.exp(L);
+    cv.textContent=L.toFixed(1);
+    pv.textContent=fmt(p);
+    nt.textContent=' ≈ 每步等效在 '+fmt(p)+' 个候选里犹豫';
+  }
+  s.addEventListener('input',upd);
+  upd();
+})();
+</script>
+</body>
+</html>
