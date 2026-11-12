@@ -16,6 +16,22 @@
     }
   },
   {
+    "week": "2026-W46",
+    "date": "2026-11-12",
+    "title": "第 1 章 · 从词向量到 GPT",
+    "summary": "整段语言模型史只回答一个问题：怎么让计算机猜下一个词。沿着「每个新发明都在补上一棒的漏」这条补丁链，从 NNLM、word2vec、RNN/LSTM、Seq2Seq + Attention 走到 Transformer 与 GPT，分清哪些是承重墙、哪些是历史砖。",
+    "tags": [
+      "大模型",
+      "词向量",
+      "Transformer",
+      "技术史"
+    ],
+    "slug": "llm-history-ch1",
+    "outputs": {
+      "html": "llm-history-ch1-总结.html"
+    }
+  },
+  {
     "week": "2026-W42",
     "date": "2026-10-17",
     "title": "第 0 章 · 面向大模型的数学基础",

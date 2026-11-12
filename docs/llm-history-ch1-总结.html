@@ -1,0 +1,2479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从词向量到 GPT · 图解语言模型简史</title>
+<style>
+  :root{
+    --ink:#1f2937; --sub:#6b7280; --bg:#f6f7f9; --card:#ffffff; --line:#e5e7eb;
+    --blue:#2563eb; --purple:#7c3aed; --cyan:#0891b2; --amber:#d97706; --red:#dc2626; --green:#059669;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,sans-serif;
+       color:var(--ink); background:var(--bg); line-height:1.75; font-size:16px}
+  .wrap{max-width:920px; margin:0 auto; padding:0 20px}
+
+  /* ============ 顶部导航 ============ */
+  nav{position:sticky; top:0; z-index:50; background:rgba(255,255,255,.95); border-bottom:1px solid var(--line);
+      backdrop-filter:blur(6px)}
+  nav .wrap{display:flex; gap:4px; overflow-x:auto; padding:10px 20px}
+  nav a{flex-shrink:0; padding:6px 14px; border-radius:999px; color:var(--sub); text-decoration:none; font-size:14px; white-space:nowrap}
+  nav a:hover{background:#eef2f7; color:var(--ink)}
+
+  /* ============ 头部总钥匙 ============ */
+  header{padding:56px 0 32px}
+  .key{background:linear-gradient(135deg,#1e293b,#334155); color:#fff; border-radius:18px; padding:32px 30px}
+  .key h1{font-size:26px; margin-bottom:6px}
+  .key .sub{color:#cbd5e1; font-size:14px; margin-bottom:22px}
+  .key .q{background:rgba(255,255,255,.1); border-left:4px solid var(--amber); padding:14px 18px; border-radius:8px;
+          font-size:17px; margin-bottom:18px}
+  .key .q b{color:#fbbf24}
+  .duo{display:flex; gap:14px; flex-wrap:wrap}
+  .duo>div{flex:1; min-width:240px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+           border-radius:12px; padding:14px 18px}
+  .duo h3{font-size:15px; margin-bottom:4px}
+  .duo p{font-size:13.5px; color:#cbd5e1}
+  .duo .tag{display:inline-block; font-size:12px; padding:1px 10px; border-radius:999px; margin-bottom:6px}
+  .t1{background:rgba(37,99,235,.35)} .t2{background:rgba(217,119,6,.35)}
+  .patch{margin-top:18px; font-size:14px; color:#e2e8f0}
+  .patch b{color:#fbbf24}
+
+  /* ============ 通用段落卡片 ============ */
+  section{padding:44px 0 10px}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:6px}
+  .sec-no{font-size:13px; font-weight:700; color:#fff; background:var(--ink); border-radius:6px; padding:2px 10px; letter-spacing:1px}
+  h2{font-size:22px}
+  .lead{color:var(--sub); font-size:14.5px; margin-bottom:18px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 24px; margin-bottom:16px}
+  h3{font-size:17px; margin-bottom:10px}
+  h4{font-size:15px; margin:14px 0 6px}
+  p{margin-bottom:8px}
+  .dim{color:var(--sub); font-size:14px}
+  .hl{background:linear-gradient(transparent 62%, #fde68a 62%)}
+  .callout{border-left:4px solid var(--blue); background:#eff6ff; border-radius:0 10px 10px 0; padding:12px 16px; margin:12px 0; font-size:14.5px}
+  .callout.amber{border-color:var(--amber); background:#fffbeb}
+  .callout.green{border-color:var(--green); background:#ecfdf5}
+  .codeblk{background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+           font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px;
+           line-height:1.7; color:#334155; overflow-x:auto; margin:10px 0}
+  table{width:100%; border-collapse:collapse; font-size:14px; margin:10px 0}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top}
+  th{background:#f3f4f6; font-weight:600}
+  .num{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+  .star{display:inline-block; background:#fef3c7; color:#b45309; font-size:12px; font-weight:700;
+        border-radius:6px; padding:1px 8px; margin-left:8px; vertical-align:2px}
+
+  /* ============ 时间线 ============ */
+  .tl{position:relative; margin-top:8px}
+  .tl::before{content:""; position:absolute; left:86px; top:0; bottom:0; width:3px; background:#d1d5db; border-radius:2px}
+  .tl-item{position:relative; display:flex; gap:20px; margin-bottom:14px}
+  .tl-year{flex-shrink:0; width:70px; text-align:right; font-weight:700; font-size:15px; padding-top:14px}
+  .tl-dot{flex-shrink:0; width:16px; height:16px; border-radius:50%; margin-top:20px; margin-left:9px;
+          border:3px solid #fff; box-shadow:0 0 0 2px #d1d5db; z-index:1}
+  .tl-card{flex:1; background:var(--card); border:1px solid var(--line); border-left:5px solid #ccc;
+           border-radius:12px; padding:14px 18px}
+  .tl-card h3{margin-bottom:4px; font-size:16px}
+  .tl-card .what{font-size:14.5px; margin-bottom:4px}
+  .tl-card .fix{font-size:13.5px; color:var(--sub)}
+  .tl-card .fix b{color:var(--ink)}
+  .c-gray{border-left-color:#9ca3af} .d-gray{background:#9ca3af}
+  .c-blue{border-left-color:var(--blue)} .d-blue{background:var(--blue)}
+  .c-purple{border-left-color:var(--purple)} .d-purple{background:var(--purple)}
+  .c-cyan{border-left-color:var(--cyan)} .d-cyan{background:var(--cyan)}
+  .c-amber{border-left-color:var(--amber)} .d-amber{background:var(--amber)}
+  .c-red{border-left-color:var(--red)} .d-red{background:var(--red)}
+
+  /* ============ 地基:one-hot vs 分布式 ============ */
+  .strips{display:flex; flex-direction:column; gap:18px; margin-top:10px}
+  .strip-row{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap}
+  .strip-label{width:120px; flex-shrink:0; font-size:14px; font-weight:600; padding-top:4px}
+  .cells{display:flex; gap:3px; flex-wrap:wrap}
+  .cell{width:34px; height:30px; border-radius:5px; display:flex; align-items:center; justify-content:center;
+        font-size:11.5px; font-variant-numeric:tabular-nums}
+  .c0{background:#f1f5f9; color:#94a3b8; border:1px solid #e2e8f0}
+  .c1{background:#fecaca; color:#b91c1c; border:1px solid #fca5a5; font-weight:700}
+  .cd{background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd}
+  .strip-note{font-size:13px; color:var(--sub); margin-top:6px}
+  .found-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px}
+
+  /* ============ 词向量实验 ============ */
+  .wv-layout{display:flex; gap:16px; flex-wrap:wrap}
+  .wv-left{flex:1; min-width:340px}
+  .wv-right{width:250px; flex-shrink:0}
+  #wvCanvas{width:100%; height:430px; background:#fbfcfe; border:1px solid var(--line); border-radius:10px; display:block}
+  .wv-ctrl{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center}
+  button{border:none; border-radius:8px; padding:8px 16px; font-size:14px; cursor:pointer; font-weight:600}
+  .btn-main{background:var(--blue); color:#fff}
+  .btn-main:hover{background:#1d4ed8}
+  .btn-ghost{background:#eef2f7; color:var(--ink)}
+  .btn-ghost:hover{background:#e2e8f0}
+  button:disabled{opacity:.45; cursor:default}
+  .wv-meta{font-size:12.5px; color:var(--sub); margin-left:auto; font-variant-numeric:tabular-nums}
+  .stat-tbl{width:100%; font-size:13px}
+  .stat-tbl td{padding:5px 6px}
+  .stat-tbl .pair{font-weight:600}
+  .up{color:var(--green); font-weight:700} .down{color:var(--red); font-weight:700}
+  .nb-line{font-size:12.5px; color:var(--sub); margin-top:8px; line-height:1.9}
+  .nb-line b{color:var(--ink)}
+  .why2{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px}
+  .why2>div{flex:1; min-width:260px; border-radius:12px; padding:14px 16px; font-size:14px}
+  .bad{background:#fef2f2; border:1px solid #fecaca}
+  .good{background:#ecfdf5; border:1px solid #a7f3d0}
+  .why2 h4{margin:0 0 6px}
+  .bad h4{color:#b91c1c} .good h4{color:#047857}
+  .why2 .verdict{font-weight:700; margin-top:6px; display:block}
+  .flow-arrow{text-align:center; color:var(--sub); font-size:14px; margin:14px 0}
+
+  /* ============ RNN 传话游戏 ============ */
+  .memwrap{margin-top:14px}
+  .tg-ctrl{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center}
+  .tg-hint{font-size:12.5px; color:var(--sub); margin-left:auto}
+  .tg-wrap{overflow-x:auto; margin-top:14px}
+  .tg-inner{position:relative; min-width:640px; padding-top:34px}
+  .tg-arc{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+  .tg{display:flex; align-items:flex-start; padding:0 4px}
+  .tg-col{flex:1; min-width:62px; text-align:center; cursor:pointer}
+  .tg-arr{color:#a78bfa; font-size:16px; padding:36px 2px 0; font-weight:700; transition:all .2s}
+  .tg-arr.lit{color:#7c3aed; text-shadow:0 0 6px rgba(124,58,237,.5)}
+  .tg-arr.dim{opacity:.2}
+  .tg-mem{height:24px; font-size:13.5px; font-weight:700; color:#b91c1c; margin-bottom:4px;
+          opacity:0; transition:opacity .5s}
+  .tg-box{background:#ede9fe; border:2px solid #c4b5fd; color:#5b21b6; border-radius:8px;
+          padding:5px 4px; font-size:14px; font-weight:700; position:relative; z-index:2; transition:all .2s}
+  .tg-box.path{border-color:#8b5cf6}
+  .tg-box.hot{border-color:#7c3aed; box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+  .tg-box.sa-hot{border-color:var(--amber); box-shadow:0 0 0 4px rgba(217,119,6,.18)}
+  .tg-tube{height:104px; width:24px; margin:8px auto 0; background:#f1f5f9; border:1.5px solid #e2e8f0;
+           border-radius:6px; position:relative; overflow:hidden}
+  .tg-water{position:absolute; bottom:0; left:0; right:0; height:0;
+            background:linear-gradient(180deg,#a5b4fc,#4f46e5); transition:height .6s, background .3s}
+  .tg-pct{font-size:11.5px; color:#64748b; margin-top:4px; font-variant-numeric:tabular-nums; height:16px}
+  .tg-wrap.sa .tg-water{height:100% !important; background:linear-gradient(180deg,#6ee7b7,#059669)}
+  .tg-wrap.sa .tg-mem{opacity:1 !important; color:#047857}
+  .tg-readout{min-height:48px; background:#f8fafc; border:1px solid var(--line); border-radius:10px;
+              padding:10px 14px; margin-top:12px; font-size:14px}
+  .tg-readout .mono{font-variant-numeric:tabular-nums; font-weight:700}
+  /* ============ 训练解剖 ============ */
+  .anat-flow{margin-top:12px}
+  .anat-t{font-size:13.5px; font-weight:700; margin:12px 0 8px; color:#334155}
+  .an-row{display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:13.5px}
+  .an-words{width:112px; font-weight:700; flex-shrink:0}
+  .an-bar{flex:1; height:16px; background:#f1f5f9; border-radius:5px; position:relative; overflow:hidden}
+  .an-bar i{position:absolute; left:0; top:0; bottom:0; display:block; border-radius:5px; background:#60a5fa; transition:width .3s}
+  .an-row.neg .an-bar i{background:#f87171}
+  .an-score{width:42px; text-align:right; font-variant-numeric:tabular-nums; color:#334155}
+  .an-mark{width:44px; color:#64748b; flex-shrink:0; font-size:12.5px}
+  .an-err{width:80px; font-variant-numeric:tabular-nums; color:#64748b; font-size:12.5px}
+  .an-force{width:52px; font-weight:700; flex-shrink:0}
+  .an-force.pull{color:var(--green)} .an-force.push{color:var(--red)}
+  .anat-ctrl{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .anat-sum{background:#f8fafc; border:1px solid var(--line); border-radius:10px;
+            padding:10px 14px; margin-top:12px; font-size:14px; min-height:42px}
+  .anat-why{margin:12px 0 0 22px}
+  .anat-why li{margin-bottom:8px; font-size:14px}
+  .anat-why b{color:#1f2937}
+
+  .fade-note{font-size:13px; color:var(--sub); margin-top:8px}
+  .cellsrow{display:flex; gap:8px; margin-top:10px}
+  .pcell{flex:1; height:40px; border-radius:8px; background:#e2e8f0; display:flex; align-items:center; justify-content:center;
+         font-size:12.5px; color:#475569; font-weight:600; animation:cellPulse 3.6s infinite}
+  .pcell.seq{animation-delay:calc(var(--i)*.45s)}
+  @keyframes cellPulse{
+    0%,100%{background:#e2e8f0; color:#475569; box-shadow:none}
+    10%{background:var(--blue); color:#fff; box-shadow:0 0 0 5px rgba(37,99,235,.18)}
+    26%{background:#e2e8f0; color:#475569; box-shadow:none}
+  }
+  .par-lab,.seq-lab{font-size:13.5px; font-weight:700; margin:18px 0 2px}
+  .seq-lab{color:var(--red)} .par-lab{color:var(--green)}
+
+  /* ============ attention 舞台 ============ */
+  .att-stage{position:relative; height:280px; background:#fbfcfe; border:1px solid var(--line);
+             border-radius:12px; margin-top:10px; overflow:hidden}
+  .att-stage svg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+  .att-row{display:flex; gap:14px; justify-content:center; position:relative}
+  .att-src{padding:22px 10px 0}
+  .att-tgt{position:absolute; bottom:18px; left:0; right:0}
+  .chip{background:#fff; border:2px solid #cbd5e1; border-radius:10px; padding:6px 14px; font-size:15px; cursor:default;
+        position:relative; transition:all .15s}
+  .att-src .chip{color:#334155}
+  .att-tgt .chip{cursor:pointer; color:#1e293b}
+  .att-tgt .chip:hover{border-color:#94a3b8}
+  .att-tgt .chip.sel{background:#fef3c7; border-color:var(--amber); font-weight:700}
+  .att-src .chip.hot{border-color:var(--amber); box-shadow:0 0 0 4px rgba(217,119,6,.15)}
+  .wb{position:absolute; top:-19px; left:50%; transform:translateX(-50%); font-size:10.5px; font-weight:700;
+      color:var(--amber); white-space:nowrap}
+  .att-bars{margin-top:14px}
+  .ab-row{display:flex; align-items:center; gap:10px; margin-bottom:5px; font-size:13px}
+  .ab-word{width:52px; text-align:right; font-weight:600; color:#334155}
+  .ab-track{flex:1; height:16px; background:#f1f5f9; border-radius:5px; overflow:hidden}
+  .ab-bar{height:100%; background:linear-gradient(90deg,#fbbf24,#d97706); border-radius:5px; transition:width .3s}
+  .ab-val{width:46px; font-variant-numeric:tabular-nums; color:var(--sub)}
+  .att-tip{font-size:12.5px; color:var(--sub); margin-top:8px}
+  .att-stage.off .att-src .chip{opacity:.38; border-color:#e2e8f0}
+  .att-stage.off .att-src .chip .wb{display:none}
+  .att-flat{background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px;
+            padding:16px 14px; text-align:center; font-size:13.5px; color:#64748b; line-height:1.8}
+
+  /* ============ Seq2Seq 便签动画 ============ */
+  .sq-stage{background:#fbfcfe; border:1px solid var(--line); border-radius:12px; margin-top:10px; padding:14px 14px 16px}
+  .sq-cap{font-size:14px; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:10px;
+          padding:9px 12px; min-height:42px; margin-bottom:12px; font-weight:600; line-height:1.6}
+  .sq-cap b{color:var(--amber)}
+  .sq-srcwrap{position:relative; padding:2px 0 4px}
+  .sq-lab{font-size:12px; font-weight:700; color:var(--sub); margin:2px 0 7px; letter-spacing:.5px}
+  .sq-srcrow{display:flex; gap:10px; flex-wrap:wrap}
+  .sq-srcrow .chip{font-size:14.5px; padding:5px 12px; display:flex; align-items:center; gap:7px; transition:all .2s}
+  .sq-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .sq-srcrow .chip.hot{border-color:var(--amber); box-shadow:0 0 0 4px rgba(217,119,6,.15); transform:translateY(-2px)}
+  .sq-cover{position:absolute; inset:0; border-radius:10px;
+            background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 9px,#dfe6ee 9px,#dfe6ee 18px);
+            display:flex; align-items:center; justify-content:center; font-size:13.5px; font-weight:700;
+            color:#64748b; opacity:0; visibility:hidden; transition:opacity .45s, visibility .45s; z-index:2}
+  .sq-cover.on{opacity:.97; visibility:visible}
+  .sq-flow{font-size:12.5px; font-weight:700; color:#94a3b8; text-align:center; margin:8px 0; letter-spacing:.5px}
+  .sq-note{background:#fffbeb; border:2px solid var(--amber); border-radius:12px; padding:10px 14px 8px;
+           margin:0 auto; width:max-content; min-width:360px; text-align:center; transition:box-shadow .3s}
+  .sq-note.pulse{box-shadow:0 0 0 6px rgba(217,119,6,.25)}
+  .sq-cells{display:flex; gap:5px; justify-content:center}
+  .sq-cell{width:36px; height:28px; border:1.5px solid #e2e8f0; border-radius:7px; background:#fff;
+           transition:background .35s}
+  .sq-nlab{font-size:11.5px; color:#b45309; margin-top:6px; font-weight:600}
+  .sq-outrow{display:flex; gap:9px; flex-wrap:wrap; margin-top:2px}
+  .sq-ochip{border:2px dashed #e2e8f0; border-radius:10px; padding:5px 10px 6px; background:#fff;
+            min-width:54px; text-align:center; transition:all .25s}
+  .sq-ochip.pending{background:#f8fafc}
+  .sq-ochip.pending .sq-w{visibility:hidden}
+  .sq-ochip.pending .sq-q{visibility:hidden}
+  .sq-ochip.ok{border-style:solid; font-weight:700; color:#1e293b}
+  .sq-ochip.bad{border-color:var(--red); color:var(--red); font-weight:700}
+  .sq-q{margin-left:2px; font-weight:800}
+  .sq-strip{display:flex; gap:1.5px; height:5px; margin-top:4px}
+  .sq-strip span{flex:1; border-radius:1.5px; background:#eef2f7; transition:background .3s}
+  .sq-mode{display:inline-flex; gap:7px; align-items:center; margin-left:12px;
+           font-size:13px; color:var(--sub); font-weight:600}
+
+  /* ============ Transformer 整机动画 ============ */
+  .tf-stage{background:#fbfcfe; border:1px solid var(--line); border-radius:12px; margin-top:10px; padding:12px 12px 14px}
+  .tf-cap{font-size:14px; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:10px;
+          padding:9px 12px; min-height:44px; margin-bottom:10px; font-weight:600; line-height:1.6}
+  .tf-cap b{color:var(--amber)}
+  .tf-cols{display:flex; gap:10px; align-items:stretch}
+  .tf-col{flex:1; border:1.5px solid var(--line); border-radius:11px; padding:9px 8px 10px; background:#fff;
+          display:flex; flex-direction:column; transition:all .3s}
+  .tf-col.hot{border-color:var(--amber); box-shadow:0 0 0 4px rgba(217,119,6,.12)}
+  .tf-col.dim{opacity:.55}
+  .tf-col.cut{opacity:.25; filter:grayscale(1)}
+  .tf-col.over{border-style:dashed}
+  .tf-h{font-size:12.5px; font-weight:800; text-align:center; margin-bottom:8px; line-height:1.35}
+  .tf-h .sub{display:block; font-size:10.5px; font-weight:600; color:var(--sub)}
+  .tf-enc .tf-h{color:#1e40af} .tf-dec .tf-h{color:#991b1b} .tf-mid .tf-h{color:#b45309}
+  .tf-mid{flex:0 0 74px; border:none; background:transparent; justify-content:center; align-items:center; padding:0}
+  .tf-row{display:flex; gap:5px; justify-content:center; flex-wrap:nowrap}
+  .tf-w{border:2px solid #93c5fd; border-radius:8px; background:#fff; color:#1e40af;
+        font-size:13px; font-weight:700; padding:4px 0; width:52px; text-align:center; transition:all .25s}
+  .tf-w.t{border-color:#fca5a5; color:#991b1b}
+  .tf-w.act{background:#eff6ff; box-shadow:0 0 0 3.5px rgba(59,130,246,.22)}
+  .tf-w.t.act{background:#fef2f2; box-shadow:0 0 0 3.5px rgba(220,38,38,.18)}
+  .tf-w.done{background:#f8fafc}
+  .tf-w.blank{border-style:dashed; color:#cbd5e1}
+  .tf-arc{height:40px; margin:2px 2px 0}
+  .tf-arc svg{width:100%; height:100%; display:block}
+  .tf-arc path{transition:opacity .35s}
+  .tf-lab{font-size:10.5px; text-align:center; font-weight:700; margin-top:5px; line-height:1.4; min-height:30px}
+  .tf-cross{height:56px; margin:2px 0}
+  .tf-cross svg{width:100%; height:100%; display:block}
+  .tf-xarrow{display:flex; align-items:center; justify-content:center; gap:6px; height:100%;
+             color:#b45309; font-size:11.5px; font-weight:800}
+  .tf-xarrow .ln{flex:1; height:3px; background:linear-gradient(90deg,#d97706,#fbbf24); border-radius:2px; max-width:70px}
+  .tf-xarrow.off{opacity:.14; filter:grayscale(1)}
+  .tf-xarrow .cx-t{white-space:nowrap}
+  .tf-cchip{border:2px solid var(--amber); background:#fffbeb; color:#b45309; border-radius:8px;
+            font-size:12px; font-weight:800; padding:2px 8px}
+  .tf-vs{display:flex; flex-direction:column; gap:4px; margin-top:8px}
+  .tf-v{border:1.5px dashed #cbd5e1; border-radius:6px; font-size:10px; font-weight:800; color:#94a3b8;
+        text-align:center; padding:3px 0; background:#fff; transition:all .3s}
+  .tf-v.full{border-style:solid; border-color:#93c5fd; color:#1e40af}
+  .tf-mid.hot .tf-v.full{border-color:var(--amber); color:#b45309; background:#fffbeb;
+        box-shadow:0 0 0 3px rgba(217,119,6,.15)}
+  .tf-gpt{margin-top:12px; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap}
+  .tf-gptlab{font-size:12px; font-weight:700; color:var(--sub)}
+  .tf-gpt .sc{font-size:14px; color:#94a3b8; font-weight:800}
+  .tf-gptbox{border:2px dashed #cbd5e1; border-radius:10px; padding:6px 14px; font-size:12.5px;
+             font-weight:700; color:#64748b; background:#f8fafc; transition:all .3s}
+  .tf-gptbox.on{border-color:var(--amber); color:#92400e; background:#fffbeb; border-style:solid}
+  .tf-legend{display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap;
+             font-size:11.5px; font-weight:700; color:var(--sub); margin:-2px 0 8px}
+  .tf-legend .sw{display:inline-block; width:15px; height:8px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  .tf-legend .sw.a{background:#d97706}
+  .tf-legend .sw.s{background:#cbd5e1}
+
+  /* ============ GPT 读写动画:一条序列过一摞层 ============ */
+  .gp-stage{background:#fbfcfe; border:1px solid var(--line); border-radius:12px; margin-top:10px; padding:12px 12px 14px}
+  .gp-cap{font-size:14px; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:10px;
+          padding:9px 12px; min-height:44px; margin-bottom:10px; font-weight:600; line-height:1.6}
+  .gp-cap b{color:var(--amber)}
+  .gp-lrow{display:flex; gap:8px; align-items:flex-start; padding:3px 0; border-radius:9px; transition:all .3s}
+  .gp-rlab{flex:0 0 64px; font-size:11px; font-weight:800; color:var(--sub); text-align:right; line-height:1.3; padding-top:5px}
+  .gp-rlab .sub{display:block; font-size:9.5px; font-weight:600; color:#94a3b8}
+  .gp-body{flex:1; min-width:0}
+  .gp-cells{display:flex; gap:5px}
+  .gp-v{flex:1; height:22px; border:1.5px dashed #cbd5e1; border-radius:6px; background:#fff;
+        font-size:10px; font-weight:800; color:#94a3b8; display:flex; align-items:center; justify-content:center; transition:all .3s}
+  .gp-v.full{border-style:solid; border-color:#93c5fd; color:#1e40af; background:#eff6ff}
+  .gp-v.fin{border-style:solid; border-color:var(--amber); color:#92400e; background:#fef3c7;
+            box-shadow:0 0 0 3px rgba(217,119,6,.22)}
+  .gp-v.cache{border-style:solid; border-color:#e2e8f0; color:#94a3b8; background:#f8fafc}
+  .gp-arc{height:26px; margin:1px 0 0}
+  .gp-arc svg{width:100%; height:100%; display:block}
+  .gp-w{flex:1; border:2px solid #93c5fd; border-radius:8px; background:#fff; color:#1e40af;
+        font-size:13px; font-weight:700; padding:4px 0; text-align:center; transition:all .25s}
+  .gp-w.blank{border-style:dashed; border-color:#e2e8f0; color:#cbd5e1}
+  .gp-w.dict{border-color:#cbd5e1; color:#64748b; background:#f8fafc}
+  .gp-w.new{border-color:var(--amber); color:#92400e; background:#fffbeb}
+  .gp-dotsrow{align-items:center}
+  .gp-dotslab{flex:1; text-align:center; font-size:11px; font-weight:700; color:#94a3b8;
+              border:1.5px dashed #e2e8f0; border-radius:8px; padding:3px 8px; transition:all .3s}
+  .gp-dotsrow.hot .gp-dotslab{border-color:var(--amber); color:#b45309; background:#fffbeb}
+  .gp-out{margin-top:10px; display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap}
+  .gp-outlab{font-size:12px; font-weight:700; color:var(--sub)}
+  .gp-ochip{border:2px solid var(--amber); background:#fffbeb; color:#92400e; border-radius:8px;
+            font-size:13px; font-weight:800; padding:3px 12px; transition:all .3s}
+  .gp-ochip.blank{border-style:dashed; border-color:#e2e8f0; color:#cbd5e1; background:#fff}
+
+  /* ============ 拆机图:零件 vs 整机 ============ */
+  .anat{display:flex; gap:6px; align-items:stretch; margin-top:10px}
+  .anat-p{border:1.5px solid var(--line); border-radius:11px; background:#fff; padding:9px 8px 10px}
+  .anat-p.hot{border-color:var(--amber); background:#fffbeb}
+  .anat-t{font-size:12.5px; font-weight:800; text-align:center; margin-bottom:7px; line-height:1.35}
+  .anat-t .sub{display:block; font-size:10.5px; font-weight:600; color:var(--sub)}
+  .anat-zoom{flex:0 0 46px; display:flex; align-items:center; justify-content:center; text-align:center;
+             font-size:10.5px; font-weight:700; color:#94a3b8; line-height:1.45}
+  .anat-mac{display:flex; gap:6px; align-items:stretch}
+  .anat-half{flex:1; border:1.5px solid var(--line); border-radius:9px; padding:5px 5px 6px; background:#fbfcfe}
+  .anat-half-t{font-size:11px; font-weight:800; text-align:center; margin-bottom:5px}
+  .anat-half-t.enc{color:#1e40af} .anat-half-t.dec{color:#991b1b}
+  .anat-layers{display:flex; flex-direction:column; gap:3px}
+  .anat-layer{display:flex; gap:2.5px}
+  .anat-seg{height:12px; border-radius:3px; font-size:8.5px; font-weight:800; color:#fff;
+            display:flex; align-items:center; justify-content:center; flex:1}
+  .anat-seg.a{background:#d97706}
+  .anat-seg.f{background:#cbd5e1; color:#64748b; flex:1.4}
+  .anat-x{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+          color:#b45309; font-size:13px; font-weight:800}
+  .anat-x span{font-size:9px; color:#94a3b8}
+  .anat-note{font-size:10.5px; color:var(--sub); text-align:center; margin-top:6px; font-weight:600; line-height:1.45}
+  .anat-slots{display:flex; flex-direction:column; gap:5px}
+  .anat-slot{border-radius:8px; padding:7px 6px; font-size:12px; font-weight:800; text-align:center; line-height:1.3}
+  .anat-slot.a{background:#d97706; color:#fff}
+  .anat-slot.f{background:#e2e8f0; color:#475569}
+  .anat-screw{margin-top:6px; font-size:10.5px; color:var(--sub); font-weight:600; text-align:center; line-height:1.45}
+  .anat-mech{background:#d97706; color:#fff; border-radius:8px; padding:8px 6px; font-size:12.5px;
+             font-weight:800; text-align:center; line-height:1.5}
+  .anat-same{margin-top:6px; font-size:11px; color:#92400e; font-weight:700; text-align:center; line-height:1.5}
+
+  /* ============ SVG 图 ============ */
+  .fig{background:#fbfcfe; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px}
+  .fig svg{width:100%; height:auto; display:block}
+  .fig-cap{font-size:13px; color:var(--sub); margin-top:8px; padding:0 4px}
+  .fig-cap b{color:var(--ink)}
+  .cl{display:block}
+  .cl+.cl{margin-top:3px}
+
+  /* ============ GPT/BERT 视野遮罩 ============ */
+  .mk-mode{display:flex; gap:8px; margin:12px 0 0}
+  .mk-btn{border:2px solid var(--line); background:#fff; color:#475569; border-radius:10px;
+          padding:6px 18px; font-size:13.5px; font-weight:700; cursor:pointer}
+  .mk-btn.on{border-color:var(--blue); color:#1d4ed8; background:#eff6ff}
+  .mk-btn.bert.on{border-color:var(--green); color:#047857; background:#ecfdf5}
+  .mk-row{display:flex; gap:10px; justify-content:center; margin:16px 0 8px; flex-wrap:wrap}
+  .mk-chip{border:2px solid #cbd5e1; background:#fff; color:#334155; border-radius:10px;
+           padding:7px 15px; font-size:16.5px; font-weight:700; cursor:pointer; min-width:60px; text-align:center}
+  .mk-chip .lk{display:block; font-size:10.5px; font-weight:400; color:#94a3b8; margin-top:1px}
+  .mk-chip.vis{border-color:#93c5fd; background:#eff6ff; color:#1e40af}
+  .mk-chip.blk{border-color:#e2e8f0; background:#f1f5f9; color:#94a3b8}
+  .mk-chip.tgt{border-color:var(--amber); background:#fef3c7; color:#92400e; box-shadow:0 0 0 4px rgba(217,119,6,.15)}
+  .mk-read{background:#f8fafc; border:1px solid var(--line); border-radius:10px;
+           padding:10px 14px; font-size:14px; min-height:44px}
+  .mk-note{font-size:13px; color:var(--sub); margin-top:8px}
+
+  /* ============ GPT 柱状图 ============ */
+  .gpt-chart{margin-top:12px}
+  .g-row{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+  .g-name{width:74px; font-weight:700; font-size:14px; text-align:right; flex-shrink:0}
+  .g-track{flex:1; position:relative; height:30px}
+  .g-bar{height:100%; border-radius:6px; display:flex; align-items:center; padding-left:10px;
+         color:#fff; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; min-width:52px}
+  .g1{background:#93c5fd; color:#1e3a8a; width:15.2%}
+  .g2{background:#3b82f6; width:44.8%}
+  .g3{background:#1d4ed8; width:100%}
+  .g-note{font-size:13px; color:var(--sub)}
+  .g-sliver{margin-top:10px; font-size:12.5px; color:var(--sub)}
+  .sliver{display:inline-block; vertical-align:middle; width:2px; height:12px; background:#dc2626; margin:0 3px}
+
+  /* ============ 阅读策略 ============ */
+  .walls{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+  .wall{background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:10px;
+        padding:10px 14px; font-size:14px; flex:1; min-width:200px}
+  .wall b{display:block; margin-bottom:2px}
+  .bricks{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .brick{background:#f1f5f9; border:1px dashed #cbd5e1; color:#64748b; border-radius:999px;
+         padding:4px 14px; font-size:13px}
+  ol.steps{margin:10px 0 0 22px}
+  ol.steps li{margin-bottom:6px}
+
+  /* ============ 结尾链条 ============ */
+  .chainline{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center;
+             padding:10px 0 4px; font-size:14.5px}
+  .chainline .ck{background:#fff; border:1.5px solid var(--line); border-radius:10px; padding:6px 12px; font-weight:600}
+  .chainline .ca{color:var(--sub)}
+  .ck.k1{border-color:var(--blue)} .ck.k2{border-color:var(--cyan)} .ck.k3{border-color:var(--amber)}
+  .ck.k4{border-color:var(--red)} .ck.k5{border-color:var(--purple)}
+
+  footer{padding:30px 0 50px; color:var(--sub); font-size:13px}
+  footer .card{padding:16px 20px}
+  .srcs{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+  .src{background:#f3f4f6; border-radius:6px; padding:2px 10px; font-size:12.5px}
+
+  @media (max-width:640px){
+    .tl::before{left:64px} .tl-year{width:50px; font-size:13px}
+    .tl-dot{margin-left:0}
+  }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a href="#timeline">时间线</a>
+  <a href="#found">地基概念</a>
+  <a href="#wordvec">词向量 ★</a>
+  <a href="#rnn">RNN 时代</a>
+  <a href="#s2s">Seq2Seq + Attention</a>
+  <a href="#trf">Transformer + GPT</a>
+  <a href="#strategy">阅读策略</a>
+  <a href="llm-lm-basics-ch2-总结.html">第 2 章笔记 →</a>
+  <a href="./">← 返回每周主题墙</a>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="key">
+    <h1>从词向量到 GPT:图解语言模型简史</h1>
+    <div class="sub">2003 → 2013 → 2014 → 2017 → 2020 · 带 ▶ 标记的都是可以动手玩的交互点</div>
+    <div class="q">整段历史只有一个主问题:<b>怎么让计算机学会"猜下一个词"</b>。<br>
+      所有名词都在回答它的两个侧面 ——</div>
+    <div class="duo">
+      <div>
+        <span class="tag t1">主角 ① 表示问题</span>
+        <h3>词怎么变成数字?</h3>
+        <p>NNLM(2003)→ word2vec(2013)。<br>成果:词 = 一串小数,意思相近则数字相近。</p>
+      </div>
+      <div>
+        <span class="tag t2">主角 ② 结构问题</span>
+        <h3>句子怎么读出关系?</h3>
+        <p>RNN / LSTM(2014 前)→ attention(2014)→ Transformer(2017)。<br>成果:任意两个词直接对话。</p>
+      </div>
+    </div>
+    <div class="patch">读法钥匙:<b>每个新发明 = 修补上一棒的漏洞</b>。看不懂某个名词时,先问一句"它补了谁的漏?",再决定细读还是跳过。</div>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<!-- ================= 时间线 ================= -->
+<section id="timeline">
+  <div class="sec-head"><span class="sec-no">总览</span><h2>补丁链时间线</h2></div>
+  <p class="lead">★ = 承重墙(必须真懂);无 ★ = 历史砖(记一句话就够)。先扫一遍这条链,后面每一幕再展开。</p>
+  <div class="tl">
+    <div class="tl-item">
+      <div class="tl-year">2003</div><div class="tl-dot d-gray"></div>
+      <div class="tl-card c-gray">
+        <h3>NNLM(神经概率语言模型)</h3>
+        <div class="what">第一个用神经网络猜下一词的模型。词向量在这里出生——但它只是配角。</div>
+        <div class="fix">补的漏:<b>人手写规则学不会语言</b> · 遗留问题:训练太慢,十年没普及</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">2013</div><div class="tl-dot d-blue"></div>
+      <div class="tl-card c-blue">
+        <h3>word2vec <span class="star">★ 承重墙</span></h3>
+        <div class="what">把"学语言"砍掉、只留"学向量":训练便宜一到两个数量级,十亿词语料一天训完。</div>
+        <div class="fix">补的漏:<b>NNLM 太贵</b> · 硬数据:king − man + woman ≈ queen · 遗留问题:一个词只有一个向量,不看上下文</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">1997/<br>2014前</div><div class="tl-dot d-purple"></div>
+      <div class="tl-card c-purple">
+        <h3>RNN / LSTM <span class="star">★ 只需记住两大死穴</span></h3>
+        <div class="what">逐词读句子、边读边记笔记。LSTM(1997)装上"阀门"缓解遗忘,但治标不治本。</div>
+        <div class="fix">死穴 1:<b>必须一步一步算,不能并行</b> · 死穴 2:<b>信息每传一步漏一点,长句必失忆</b></div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">2014</div><div class="tl-dot d-cyan"></div>
+      <div class="tl-card c-cyan">
+        <h3>Seq2Seq(编码器-解码器)</h3>
+        <div class="what">"读进变长句子 → 压成一个向量 → 逐词写出变长句子"的通用模板。翻译第一次追平手工流水线。</div>
+        <div class="fix">补的漏:<b>变长进变长出没有统一做法</b> · 硬数据:WMT'14 英→法 34.8 BLEU · 遗留问题:整句挤一个向量,长句必丢信息</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">2014</div><div class="tl-dot d-cyan"></div>
+      <div class="tl-card c-cyan">
+        <h3>attention(注意力)<span class="star">★ 承重墙</span></h3>
+        <div class="what">生成每个词之前,回头把原文所有位置看一遍,按相关性加权取信息。不再依赖那个压扁的总向量。</div>
+        <div class="fix">补的漏:<b>Seq2Seq 的漏斗瓶颈</b> · 硬数据:17.7 → 26.8 BLEU,白捡 9 分,且长句不再掉分</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">2017</div><div class="tl-dot d-amber"></div>
+      <div class="tl-card c-amber">
+        <h3>Transformer <span class="star">★ 承重墙</span></h3>
+        <div class="what">论文标题"Attention Is All You Need"是字面意思:扔掉 RNN,只留 attention,句子所有词同时算。</div>
+        <div class="fix">补的漏:<b>RNN 两大死穴一次清零</b> · 意义:GPU 终于喂得饱,"规模时代"的物理前提</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-year">2018-20</div><div class="tl-dot d-red"></div>
+      <div class="tl-card c-red">
+        <h3>GPT 系列 <span class="star">★ 承重墙</span></h3>
+        <div class="what">Transformer 解码器 + 海量文本猜下一词。验证:这条路可以无脑放大,放大就是变强。</div>
+        <div class="fix">硬数据:GPT-1 1.17亿 → GPT-2 15亿 → GPT-3 1750亿参数,约两年放大 1500 倍(跨 3 个数量级)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 地基概念 ================= -->
+<section id="found">
+  <div class="sec-head"><span class="sec-no">第 0 幕</span><h2>三个地基概念</h2></div>
+  <p class="lead">后面所有名词都盖在这三块地基上。钉死它们,历史就只剩"换方案"。</p>
+  <div class="card">
+    <div class="found-grid">
+      <div>
+        <h3>① 语言模型(LM)</h3>
+        <p>猜下一词的机器。输入"今天天气很",输出"好"的概率最高。</p>
+        <p class="dim">NNLM、GPT、LLM 里的"LM"全是它。今天的大模型干的仍是这件事,没变过。</p>
+      </div>
+      <div>
+        <h3>② 神经网络</h3>
+        <p>一个有几十万到几十亿个<span class="hl">可调旋钮</span>的函数。训练 = 喂大量数据,让机器自动把旋钮调到输出正确。</p>
+        <p class="dim">之前是人手写规则;神经网络是从数据里自己学。</p>
+      </div>
+      <div>
+        <h3>③ 词怎么变数字</h3>
+        <p>计算机只认数字,不认"猫"。老办法 one-hot 和新办法分布式表示,见下图。</p>
+        <p class="dim">"分布式"指:意思摊在几十个数上,单看任何一个数都没有含义。</p>
+      </div>
+    </div>
+    <div class="strips">
+      <div class="strip-row">
+        <div class="strip-label">one-hot<br><span class="dim" style="font-weight:400">2013 年前的标准做法</span></div>
+        <div>
+          <div class="cells" id="ohStrip"></div>
+          <div class="strip-note">词表排一列,"小猫"排第 4 位 → 16 维里只有一个 1,其余全 0。<br>
+          <b>致命伤:任何两个词的距离都完全一样</b>——"小猫↔小狗"和"小猫↔火箭"一样远,语义无处安放。</div>
+        </div>
+      </div>
+      <div class="strip-row">
+        <div class="strip-label">分布式表示<br><span class="dim" style="font-weight:400">2003 年起步,2013 年普及</span></div>
+        <div>
+          <div class="cells" id="denseStrip"></div>
+          <div class="strip-note">改成几个小数,数值由"这个词周围常出现什么"决定。<b>语义近 → 向量近</b>,关系有了落脚点。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 词向量 ================= -->
+<section id="wordvec">
+  <div class="sec-head"><span class="sec-no">第 1 幕</span><h2>词向量:语义是自己"长"出来的</h2></div>
+  <p class="lead">教材里最玄的一句话,拆成四个零件 + 一个实验。</p>
+
+  <div class="card">
+    <h3>那句"出生证明"到底在说什么</h3>
+    <p style="font-size:15.5px"><span class="hl">"为了预测准,输入层的词向量自己长出了语义。"</span>一句话说了四件事:</p>
+    <table>
+      <tr><th style="width:110px">零件</th><th>白话含义</th><th>关键事实</th></tr>
+      <tr><td><b>为了预测准</b></td><td>全程唯一的考核标准,没人考"懂不懂意思"</td><td>训练目标只有"下一个词猜对了吗"</td></tr>
+      <tr><td><b>输入层</b></td><td>词向量住的地方</td><td>词向量是<span class="hl">可调旋钮</span>,不是写死的标签</td></tr>
+      <tr><td><b>自己长出</b></td><td>没有任何语义标注,语义是降错误的副产品</td><td>训练只会往"错误更低"的方向挪旋钮</td></tr>
+      <tr><td><b>出生证明</b></td><td>史上第一次出现"带语义的向量"</td><td>2003 年前只有 one-hot,词间距离毫无意义</td></tr>
+    </table>
+    <div class="callout">机关全在第二行:one-hot 是写死的标签,调不动;NNLM 第一次把"表示"本身设成了可调旋钮。
+      表示可调,考核又只有预测,那么词与词的关系<span class="hl">只能被压进这几个数字里</span>——模型里没有别的地方可放。</div>
+  </div>
+
+  <div class="card">
+    <h3>为什么"预测准"会强迫向量带上语义</h3>
+    <p>看最小场景。语料里有四句话:"小猫 追 皮球"、"小狗 追 皮球"、"小猫 吃 鱼"、"小狗 吃 骨头"。</p>
+    <p>关键事实:<b>向量之后那部分网络,所有词共用一套</b>。它不认识猫也不认识狗,只加工送进来的数字。</p>
+    <div class="why2">
+      <div class="bad">
+        <h4>若猫、狗向量离得远 ✗</h4>
+        网络收到的输入完全不同,却要输出几乎相同的预测。<br>
+        只能硬记两套规则:"猫+追"之后怎样、"狗+追"之后怎样。<br>
+        语料到亿级句子,记不过来。
+        <span class="verdict">→ 错误高</span>
+      </div>
+      <div class="good">
+        <h4>若猫、狗向量离得近 ✓</h4>
+        两句话变成几乎同一个输入。<br>
+        一套规则通吃,参数省下来学真正的新模式。
+        <span class="verdict">→ 错误低</span>
+      </div>
+    </div>
+    <div class="flow-arrow">▼ &nbsp;训练每轮都往"错误更低"的方向挪一点点 → 猫、狗被迫靠近 → 几百轮后,关系结构印进向量表</div>
+    <div class="callout green">所以"长出"不是文学修辞:<b>是错误压力把语义压进去的,数学上没有第二条路。</b>
+      而猫和火箭从不共享上下文,硬拉近只会让网络混淆,错误上升,梯度反着推。</div>
+    <h4>为什么"上下文统计"就等于"语义"?</h4>
+    <p>语言学里的<b>分布假设</b>(Firth, 1957):一个词的意思,由它周围常出现的词决定。想想"貔貅":你不认识它,
+      但千百次见它出现在"招财、瑞兽、镇宅"旁边,你自然猜到它是什么。人也主要靠这个学词义。</p>
+    <div class="callout amber">换个角度:猜下一词这场考试,<b>考的本来就是语义,只是换了考法</b>。想在亿万句话上拿高分,硬背背不下来,
+      唯一出路是把词按"行为方式"分好类——分出来的类,恰好就是我们说的"意思"。</div>
+  </div>
+
+  <div class="card">
+    <h3>▶ 亲眼看它长出来:训练一个真的词向量</h3>
+    <p>下面是一个真的在训练的 skip-gram 模型(词向量版,与配套的 word_vector_demo.py 同一套算法)。
+      语料 9 句中文、16 个词,<b>零语义标注</b>;训练目标唯一:共现的词拉近,随机抽的词推远。</p>
+    <div class="wv-layout">
+      <div class="wv-left">
+        <canvas id="wvCanvas"></canvas>
+        <div class="wv-ctrl">
+          <button class="btn-main" id="wvRun">▶ 开始训练</button>
+          <button class="btn-ghost" id="wvStep">+10 轮</button>
+          <button class="btn-ghost" id="wvReset">↺ 重置</button>
+          <span class="wv-meta" id="wvMeta">第 0 轮 / 共 600 轮</span>
+        </div>
+        <p class="att-tip">把鼠标移到点上:看这个词当前离谁最近。训练前邻居是随机的;训练后,动物家族、火箭家族自动抱团。</p>
+      </div>
+      <div class="wv-right">
+        <table class="stat-tbl">
+          <tr><th colspan="3">余弦相似度(越像越接近 1)</th></tr>
+          <tr><td class="pair">小猫 ↔ 小狗</td><td id="s0" class="num">—</td><td class="dim">预期:高</td></tr>
+          <tr><td class="pair">鱼 ↔ 骨头</td><td id="s1" class="num">—</td><td class="dim">预期:高</td></tr>
+          <tr><td class="pair">小猫 ↔ 皮球</td><td id="s2" class="num">—</td><td class="dim">预期:较高</td></tr>
+          <tr><td class="pair">小猫 ↔ 火箭</td><td id="s3" class="num">—</td><td class="dim">预期:低</td></tr>
+        </table>
+        <div class="nb-line" id="nbLine"></div>
+        <p class="att-tip">预期"高"的词对上下文重合(都追皮球、都吃);预期"低"的词对上下文毫无交集。</p>
+      </div>
+    </div>
+    <div class="fig-cap">
+      <span class="cl">训练前点的位置是随机的、邻居是随机的;训练后出现稳定的分层结构,换随机种子结构不变。</span>
+      <span class="cl"><b>谁都没打算发明词向量,它是从预测任务里自己渗出来的</b>——这就是"出生证明"。</span>
+    </div>
+    <div class="callout">检查放大版的成果:2013 年人们在亿级语料上检查这张表,发现 <b>king − man + woman ≈ queen</b>
+      ——性别、时态、首都-国家这些关系,在向量空间里是稳定的"方向"。</div>
+    <h4>这一幕在历史上的收尾</h4>
+    <p>
+      <span class="cl">NNLM 里这张表是配角,旋钮大头在后面的网络。</span>
+      <span class="cl">2013 年 Mikolov 看清<span class="hl">渗出来的副产品才是最值钱的</span>:把网络砍掉、只留向量表来批量生产——这就是 word2vec 的全部聪明之处。</span>
+      <span class="cl">硬数据:十亿词语料,CPU 集群约一天训完(2013 年口径)。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>▶ 一轮训练解剖:画布上的点到底在被什么拉动</h3>
+    <p>上面实验用的算法是 <b>skip-gram + 负采样</b>(word2vec 的训练法)。一次"微调"只有两个动作:
+      给一对词打分,错了就挪一点。下面的分数全部实时读自左侧那个正在训练的真实模型。</p>
+    <div class="anat-flow">
+      <div class="anat-t">① 从语料里抽一对<b>真邻居</b>(句子里互相挨着的词)——目标是让分数逼近 1</div>
+      <div id="anatPos"></div>
+      <div class="anat-t">② 再随机抽 6 个<b>陌生词</b>当反例(这一步就叫"负采样")——目标是把分数压回 0</div>
+      <div id="anatNegs"></div>
+    </div>
+    <div class="anat-ctrl">
+      <button class="btn-ghost" id="anatDraw">🎲 再抽一对</button>
+      <button class="btn-main" id="anatApply">▶ 对模型执行这步微调</button>
+    </div>
+    <div class="anat-sum" id="anatSum"></div>
+    <div class="callout" style="margin-top:12px">
+      <b>打分</b>:分数(a,b) = σ(v<sub>a</sub> · u<sub>b</sub>)。两个向量做点积,再过 σ(sigmoid,把任意数字压进 0~1)——
+      分数读作"模型认为这俩是邻居的可能性"。<br>
+      <b>挪动</b>:v<sub>a</sub> ← v<sub>a</sub> + 学习率 × (目标 − 分数) × u<sub>b</sub>。
+      误差为正 → 朝对方方向挪 → 点积变大 → 拉近;误差为负 → 反方向挪 → 推远。
+      <b>误差多大,就挪多远;预测全对就不动。</b>
+    </div>
+    <ul class="anat-why">
+      <li><b>为什么随机抽几个词就够当反例?</b>对全部几万个词都算一遍"不是邻居"太贵;抽 6 个随机词,
+        足以把向量推离"平均位置",效果逼近全表。word2vec 比前辈便宜一到两个数量级,核心就在这一步。</li>
+      <li><b>为什么挪多少由误差定?</b>这是梯度下降的本质:模型永远在补自己最不会的题——
+        错得越离谱,挪得越多;已经学会的,几乎不碰。</li>
+      <li><b>为什么这么便宜的目标能长出语义?</b>回到上面的逻辑链:预测要准,行为相似的词就必须靠近。
+        目标里没有一个字提到"意思",意思是降错误的副产品。</li>
+    </ul>
+    <div class="fig-cap">「执行这步微调」操作的就是左侧画布上的真实模型。
+      <span class="cl">执行后盯着画布看:点几乎没动——单步影响就这么小。</span>
+      <span class="cl">但 600 轮 = 36 对 × 7 次打分 × 600 ≈ <b>15 万次微调</b>——抱团就是这么一次一次攒出来的。</span>
+      <span class="cl">训练成熟后,看点不在"分数逼近 1",而在<b>真邻居稳定高于反例</b>:负采样也会拉低所有分数的绝对值,但排序始终保持。</span></div>
+  </div>
+</section>
+
+<!-- ================= RNN ================= -->
+<section id="rnn">
+  <div class="sec-head"><span class="sec-no">第 2 幕</span><h2>RNN / LSTM:让句子被逐词读过</h2></div>
+  <p class="lead">word2vec 留下的漏洞:同一个词在任何句子里都是同一个向量——"苹果手机"和"苹果好吃"里的苹果被当成一个意思。需要按顺序读句子的模型。</p>
+  <div class="card">
+    <h3>RNN 怎么读句子</h3>
+    <p>读完一个词,更新一次内部记忆,再读下一个。任意长度都能吃,上下文开始起作用——但记忆的传法,天生带着一个死穴:</p>
+    <div class="memwrap">
+      <h4>死穴 2:传话游戏——每个词只知道前一个词的转述</h4>
+      <p class="dim">RNN 里,信息只能一词传给下一个词,每传一次剩 70%(示意值)。
+        问:读到句尾「小猫」时,句首的「我」还剩多少?</p>
+      <div class="tg-ctrl">
+        <button class="btn-main" id="tgPlay">▶ 播放传递过程</button>
+        <button class="btn-ghost" id="tgReset">↺ 重置</button>
+        <button class="btn-ghost" id="tgSa">⚡ 换 self-attention 视角</button>
+        <span class="tg-hint">或把鼠标悬停到任意词上</span>
+      </div>
+      <div class="tg-wrap" id="tgWrap">
+        <div class="tg-inner" id="tgInner">
+          <svg class="tg-arc" id="tgArc"></svg>
+          <div class="tg" id="tg"></div>
+        </div>
+      </div>
+      <div class="tg-readout" id="tgReadout"></div>
+      <div class="fig-cap" style="margin-top:8px">
+        <span class="cl">红色文字 = 这个位置的记忆里的「我」,越往后越看不清(文字透明度 = 剩余比例)。</span>
+        <span class="cl">下面的水管 = 记忆余量,管上的数字是精确百分比。</span>
+      </div>
+      <div class="fade-note">规律:剩 <b>0.7<sup>n</sup></b>(n = 转手次数)。
+        <b>第 8 个词只剩 8%——这就是"长距离信息退化":长句读到后半段,忘了前半段。</b>
+        LSTM 的阀门只能减缓这条衰减,不能根除。</div>
+    </div>
+    <h4>死穴 1:必须一步一步算,GPU 喂不饱</h4>
+    <p class="dim">GPU 本来能一次并行算一万条数据;RNN 第 2 步必须等第 1 步算完,只能一个词一个词排队。规模上不去。</p>
+    <div class="seq-lab">RNN:一个词算完才能算下一个(看灯依次亮)</div>
+    <div class="cellsrow" id="seqCells"></div>
+    <div class="callout"><b>LSTM(1997 年发明)</b>:给 RNN 装三个阀门——记什么、忘什么、放什么出去,让重要信息有直通车道。
+      缓解死穴 2,<b>死穴 1 原样保留</b>。内部细节可以黑箱,记住"治标不治本"即可。
+      记住这副零件的样子——下一幕的翻译机器,就是拿它组装的。</div>
+  </div>
+</section>
+
+<!-- ================= Seq2Seq + Attention ================= -->
+<section id="s2s">
+  <div class="sec-head"><span class="sec-no">第 3 幕</span><h2>Seq2Seq 与 attention:翻译任务逼出来的两个发明</h2></div>
+  <p class="lead">上一幕的 RNN / LSTM 都只是<b>零件</b>;翻译要求一台完整机器:<b>既要会读,又要会写</b>。这一幕的两个发明,都是被这个要求一步步逼出来的。
+    (背景:当时翻译主流是统计机器翻译 SMT——几十个手工组件拼接;神经路线要证明一个模型端到端全包。)</p>
+
+  <div class="card">
+    <h3>Seq2Seq:拿两个 LSTM 组装出的翻译机器</h3>
+    <p>先把三个名字的关系钉死,再看图:</p>
+    <table>
+      <tr><th style="width:96px">名字</th><th>是什么</th><th>在这一幕的角色</th></tr>
+      <tr><td><b>RNN</b></td><td>逐词读句子的基础零件(会失忆)</td><td>原料</td></tr>
+      <tr><td><b>LSTM</b></td><td>RNN 的改良零件:加阀门缓解失忆(上一幕主角)</td><td>图里标注的<b>部件</b></td></tr>
+      <tr><td><b>Seq2Seq</b></td><td>不是新零件,是<b>组装方案</b>:两个 LSTM,一个专职读、一个专职写</td><td>这一幕造出的<b>机器</b></td></tr>
+    </table>
+    <p class="dim">类比:LSTM 之于 Seq2Seq,如同发动机之于汽车。Seq2Seq 没有发明任何新零件,它做的事只有一件——
+      <span class="hl">把上一幕的零件组装成完整系统</span>。</p>
+    <div class="fig">
+      <svg viewBox="0 0 680 235" xmlns="http://www.w3.org/2000/svg">
+        <g font-size="14" font-weight="600" text-anchor="middle">
+          <rect x="14" y="18"  width="100" height="32" rx="8" fill="#fff" stroke="#93c5fd"/><text x="64" y="39"  fill="#1e40af">I</text>
+          <rect x="14" y="66"  width="100" height="32" rx="8" fill="#fff" stroke="#93c5fd"/><text x="64" y="87"  fill="#1e40af">ate</text>
+          <rect x="14" y="114" width="100" height="32" rx="8" fill="#fff" stroke="#93c5fd"/><text x="64" y="135" fill="#1e40af">an</text>
+          <rect x="14" y="162" width="100" height="32" rx="8" fill="#fff" stroke="#93c5fd"/><text x="64" y="183" fill="#1e40af">apple</text>
+        </g>
+        <g stroke="#94a3b8" stroke-width="1.6" fill="none">
+          <path d="M114,34  Q210,34 297,102"/>
+          <path d="M114,82  Q210,82 297,106"/>
+          <path d="M114,130 Q210,130 297,110"/>
+          <path d="M114,178 Q210,178 297,114"/>
+        </g>
+        <circle cx="330" cy="108" r="34" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+        <text x="330" y="103" font-size="12.5" text-anchor="middle" fill="#92400e" font-weight="700">固定长度</text>
+        <text x="330" y="120" font-size="12.5" text-anchor="middle" fill="#92400e" font-weight="700">向量</text>
+        <g stroke="#94a3b8" stroke-width="1.6" fill="none">
+          <path d="M363,102 Q470,34 566,28"/>
+          <path d="M363,106 Q470,72 566,72"/>
+          <path d="M363,109 Q470,110 566,116"/>
+          <path d="M363,113 Q470,150 566,160"/>
+          <path d="M363,116 Q470,188 566,204"/>
+        </g>
+        <g font-size="14" font-weight="600" text-anchor="middle">
+          <rect x="566" y="12"  width="100" height="32" rx="8" fill="#fff" stroke="#fca5a5"/><text x="616" y="33"  fill="#991b1b">我</text>
+          <rect x="566" y="56"  width="100" height="32" rx="8" fill="#fff" stroke="#fca5a5"/><text x="616" y="77"  fill="#991b1b">吃</text>
+          <rect x="566" y="100" width="100" height="32" rx="8" fill="#fff" stroke="#fca5a5"/><text x="616" y="121" fill="#991b1b">了</text>
+          <rect x="566" y="144" width="100" height="32" rx="8" fill="#fff" stroke="#fca5a5"/><text x="616" y="165" fill="#991b1b">一个</text>
+          <rect x="566" y="188" width="100" height="32" rx="8" fill="#fff" stroke="#fca5a5"/><text x="616" y="209" fill="#991b1b">苹果</text>
+        </g>
+        <text x="112" y="228" font-size="12.5" fill="#6b7280">编码器 = 一个 LSTM,专职读完整句</text>
+        <text x="292" y="163" font-size="12" fill="#b45309" font-weight="700">← 漏斗 →</text>
+        <text x="442" y="228" font-size="12.5" fill="#6b7280">解码器 = 另一个 LSTM,专职逐词写出</text>
+      </svg>
+      <div class="fig-cap">
+        <span class="cl"><b>编码器</b>(读的那个 LSTM)把整句压进一个固定长度向量;<b>解码器</b>(写的那个 LSTM)拿它当起点逐词生成,直到吐出结束符。</span>
+        <span class="cl">生成时吐出的词再接回去当输入——这个动作叫<b>自回归</b>,今天所有大模型生成文字用的就是它。</span>
+      </div>
+    </div>
+    <table>
+      <tr><th>硬数据</th><td class="num">Sutskever et al. 2014,WMT'14 英→法 <b>34.8 BLEU</b>(对 SMT 候选重排序的口径),首次追平统计系统</td></tr>
+      <tr><th>价值</th><td>不是一个翻译算法,是一个模板:摘要、对话、语音转文字、代码生成全是它的实例</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>从 Seq2Seq 到 attention:病根到底在哪</h3>
+    <p>成绩追平了——但把解码器的处境走一遍,疼的地方就露出来了:<b>整句原文被压成一张固定便签,写每个词用的都是它,而且不许翻看原文。</b></p>
+    <h4>▶ 动画:一张便签写完整句(点「播放」,两个病亲眼发生)</h4>
+    <div class="tg-ctrl">
+      <button class="btn-main" id="sqPlay">▶ 播放</button>
+      <button class="btn-ghost" id="sqReset">↺ 重置</button>
+      <span class="sq-mode">句长:
+        <button class="mk-btn on" id="sqShort">短句(4 词)</button>
+        <button class="mk-btn" id="sqLong">长句(9 词)</button>
+      </span>
+    </div>
+    <div class="sq-stage">
+      <div class="sq-cap" id="sqCap">点「播放」:先编码(把原句压进便签),再解码(一个词一个词往外写)。</div>
+      <div class="sq-srcwrap">
+        <div class="sq-lab">原句(编码器的输入)</div>
+        <div class="sq-srcrow" id="sqSrc"></div>
+        <div class="sq-cover" id="sqCover">🚫 原文收走 · 之后写每个词都不许再看</div>
+      </div>
+      <div class="sq-flow">▼ 编码器:整句压进一张固定便签 ▼</div>
+      <div class="sq-note" id="sqNote">
+        <div class="sq-cells" id="sqCells"></div>
+        <div class="sq-nlab">便签 = 固定 8 格(示意真实模型的固定向量,如 512 个数)</div>
+      </div>
+      <div class="sq-flow">▼ 解码器:一次写一个词,每步手里只有这张便签 ▼</div>
+      <div class="sq-outrow" id="sqOut"></div>
+    </div>
+    <div class="fig-cap" style="margin-top:8px">
+      <span class="cl">色点/格子颜色 = 每个原词的信息;便签格子被<b>后读入的词覆盖</b>。</span>
+      <span class="cl">写出词下面那条色带 = 那一步解码器拿到的便签快照——<b>注意看它们是不是一模一样</b>。</span>
+      <span class="cl">红色 <b>?</b> = 需要的信息已被挤掉,只能硬写(示意:真实向量里是"挤占"不是"清零",结论相同)。</span>
+    </div>
+    <table>
+      <tr><th style="width:110px">病 ① 容量瓶颈</th>
+        <td>向量尺寸固定(比如 512 个数)。"我 吃 了 一个 苹果"挤得下;换成 50 个词,细节必然被挤掉。<b>出口就这么宽——与 LSTM 阀门无关。</b></td></tr>
+      <tr><th>病 ② 一视同仁</th>
+        <td>写「苹果」时最需要 apple 的信息,写「我」时最需要 I 的信息;但便签里两种信息混在一起,<b>没法为某一步单独取料</b>。</td></tr>
+    </table>
+    <div class="memwrap">
+      <h4>病 ② 具体砸在哪(便签是「混合物」,不是「分格收纳盒」)</h4>
+      <table>
+        <tr><th style="width:110px">稀释 + 折中</th>
+          <td>8 个词压一张便签,写「苹果」时 apple 的信号只占约 <b class="num">1/8</b>;且便签全程不变,只能学成「对每一步都平均够用」的折中配方——
+            <b>每步都拿到,但每步都不是最佳配比</b>。对比下一张卡:attention 每步现配,写「苹果」时 apple 占 <b class="num">0.88</b>,写「我」时 I 占 <b class="num">0.92</b>——差距全在这。</td></tr>
+        <tr><th>拿不出来</th>
+          <td>解码器其实<b>知道</b>此刻该写什么词(它记得写到哪了),但各词的信息已搅在一起,混合在数学上不可逆——
+            <b>知道要什么 ≠ 拿得到</b>。设计里就没装「分步取料」按钮,训练救不了(同病①:阀门治不了出口)。</td></tr>
+      </table>
+    </div>
+    <div class="callout amber"><b>和上一幕的传话游戏分清</b>:上一幕,信息在<b>链条传递中</b>衰减,阀门能缓解;这一幕,信息在<b>漏斗处</b>被挤掉,阀门治不了——瓶颈是出口宽度,不是路上损耗。
+      落到译文上:漏译内容词(病①)/ 修饰语挂错、复读卡死(病②)。发作条件:<b>病①要长句才发作;病②任何长度都在</b>——长句两病叠加,才崩得那么明显。</div>
+    <p>修法因此被需求一格一格逼了出来:</p>
+    <ol class="steps">
+      <li><b>别收走原文</b>——原文全程摊在作者桌上;</li>
+      <li>写<b>每一个</b>词之前,允许回头看一眼原文;</li>
+      <li>看的时候<b>按此刻的需要</b>取料,而不是整包吞下。</li>
+    </ol>
+    <div class="flow-arrow">▼ 这三行需求逐字翻译成机制,就是 attention ↓</div>
+  </div>
+
+  <div class="card">
+    <h3>attention:把"回头看原文"做成模型的一部分</h3>
+    <div class="memwrap">
+      <h4>先把这个名字本身钉死:attention = 目光分配</h4>
+      <p>借用的是人眼:看一幅画从不均匀地看所有地方——<b>目光自动聚焦相关区域,其余扫一眼带过</b>(心理学叫"选择性注意":带宽有限,必须挑)。
+        2014 年 Bahdanau 把这套思想搬进翻译:写每个词前,把原句"看"一遍,按此刻需要分配目光。2017 年论文标题《Attention Is All You Need》是字面意思:
+        这台机器里真正干活的就是这个"看"的机制,其余都不要了。</p>
+      <table>
+        <tr><th style="width:96px">什么和什么</th>
+          <td>attention 永远发生在<b>两方</b>之间:看的人(问的人)把目光摊到被看的(一排东西)上。翻译里 = 解码器此刻的状态 看 原句每个位置;
+            下一幕 self-attention = 句中每个词 看 同一句话(含自己)。机制一字不差,变的只是双方。</td></tr>
+        <tr><th>目光预算</th>
+          <td>softmax 出的权重<b>加起来恰好 = 1</b>:目光总量固定,各位置只争分配——点「苹果」时 88% 压在 apple 上,不是其他位置被关掉,是 apple 分走了预算的大头。</td></tr>
+        <tr><th>软,不是聚光灯</th>
+          <td>人的注意力像开关:盯住一个、无视其他。模型的注意力是<b>软</b>的:每个位置都分一点、永不归零。
+            这不是妥协是必须——每条分配都连续可导,梯度才流得过去、才能训练。(历史上真试过每次只挑一个位置看的"硬注意力",不可导,训练极难,输了。)</td></tr>
+      </table>
+      <div class="callout">白话定义:<b>attention = 一笔按相关性分配的目光预算,软性摊开,加权取货。</b>下面三步,就是这句话的数学化。</div>
+    </div>
+    <p>上一张卡结尾的三行需求,attention 逐条实现。具体三步:</p>
+    <table>
+      <tr><td class="num" style="width:36px">①</td><td>当前解码状态与每个原句位置算一个相关性分数</td></tr>
+      <tr><td class="num">②</td><td>分数过 <b>softmax</b>,变成一组和为 1 的权重</td></tr>
+      <tr><td class="num">③</td><td>按权重对所有原句状态加权求和,得到"此刻最相关的信息包",再拿去生成这个词</td></tr>
+    </table>
+    <h4>▶ 体验对比:作者桌上有没有原文(点中文词看目光落点)</h4>
+    <div class="anat-ctrl">
+      <button class="btn-main" id="attToggle">🙈 收走原文:模拟纯 Seq2Seq</button>
+    </div>
+    <p class="att-tip" id="attModeTip" style="margin-top:8px">当前状态:<b>有 attention</b>——原文摊在桌上,写每个词都能回头看。点左边按钮把原文收走,体验 Seq2Seq 作者的处境。</p>
+    <div class="att-stage" id="attStage">
+      <svg id="attSvg"></svg>
+      <div class="att-row att-src" id="attSrc"></div>
+      <div class="att-row att-tgt" id="attTgt"></div>
+    </div>
+    <div class="att-bars" id="attBars"></div>
+    <p class="att-tip" id="attBarsTip">线越粗 = 权重越大(数字即那次 softmax 的输出,为示意值)。点"吃"看 ate,点"苹果"看 apple——这张权重图,恰好就是翻译里的词对齐。</p>
+    <h4>整机对比:加 attention 前后,翻译机改了哪里</h4>
+    <div class="fig">
+      <svg viewBox="0 0 680 352" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="mkV2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/></marker>
+          <marker id="mkG2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker>
+        </defs>
+        <line x1="340" y1="8" x2="340" y2="306" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+        <text x="170" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#7c3aed">改前 · 纯 Seq2Seq(2014.09)</text>
+        <text x="170" y="38" text-anchor="middle" font-size="10.5" fill="#6b7280">两个 LSTM,中间一张便签</text>
+        <text x="56" y="52" text-anchor="middle" font-size="10.5" fill="#6b7280">编码器 LSTM(读)</text>
+        <g font-size="13" font-weight="600" text-anchor="middle">
+          <g fill="#fff" stroke="#93c5fd" stroke-width="2">
+            <rect x="18" y="58" width="76" height="30" rx="8"/><rect x="18" y="104" width="76" height="30" rx="8"/>
+            <rect x="18" y="150" width="76" height="30" rx="8"/><rect x="18" y="196" width="76" height="30" rx="8"/>
+          </g>
+          <g fill="#1e40af">
+            <text x="56" y="78">I</text><text x="56" y="124">ate</text><text x="56" y="170">an</text><text x="56" y="216">apple</text>
+          </g>
+        </g>
+        <g stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#mkV2)">
+          <path d="M56,88 L56,100"/><path d="M56,134 L56,146"/><path d="M56,180 L56,192"/>
+        </g>
+        <g stroke="#94a3b8" stroke-width="1.6" fill="none">
+          <path d="M94,73 Q136,73 170,113"/><path d="M94,119 Q136,119 173,123"/>
+          <path d="M94,165 Q136,165 173,133"/><path d="M94,211 Q136,211 170,143"/>
+        </g>
+        <circle cx="200" cy="127" r="26" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+        <text x="200" y="123" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">固定</text>
+        <text x="200" y="139" text-anchor="middle" font-size="11" font-weight="700" fill="#92400e">向量 c</text>
+        <text x="200" y="172" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">每步都是同一张</text>
+        <text x="288" y="52" text-anchor="middle" font-size="10.5" fill="#6b7280">解码器 LSTM(写)</text>
+        <g font-size="13" font-weight="600" text-anchor="middle">
+          <g fill="#fff" stroke="#fca5a5" stroke-width="2">
+            <rect x="248" y="50" width="80" height="30" rx="8"/><rect x="248" y="96" width="80" height="30" rx="8"/>
+            <rect x="248" y="142" width="80" height="30" rx="8"/><rect x="248" y="188" width="80" height="30" rx="8"/>
+            <rect x="248" y="234" width="80" height="30" rx="8"/>
+          </g>
+          <g fill="#991b1b">
+            <text x="288" y="70">我</text><text x="288" y="116">吃</text><text x="288" y="162">了</text><text x="288" y="208">一个</text><text x="288" y="254">苹果</text>
+          </g>
+        </g>
+        <g stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#mkV2)">
+          <path d="M288,80 L288,92"/><path d="M288,126 L288,138"/><path d="M288,172 L288,184"/><path d="M288,218 L288,230"/>
+        </g>
+        <g stroke="#94a3b8" stroke-width="1.6" fill="none">
+          <path d="M226,110 Q238,86 246,67"/><path d="M226,122 Q237,112 246,111"/>
+          <path d="M226,132 Q237,142 246,157"/><path d="M226,138 Q238,172 246,203"/><path d="M224,142 Q236,200 246,249"/>
+        </g>
+        <text x="170" y="296" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">信息出口 = 1 张固定便签(全程同一张)</text>
+
+        <text x="510" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">改后 · Seq2Seq + attention(2014)</text>
+        <text x="510" y="38" text-anchor="middle" font-size="10.5" fill="#6b7280">还是那两个 LSTM,多一条取料通路</text>
+        <text x="396" y="52" text-anchor="middle" font-size="10.5" fill="#6b7280">编码器 LSTM(读)</text>
+        <g font-size="13" font-weight="600" text-anchor="middle">
+          <g fill="#fff" stroke="#93c5fd" stroke-width="2">
+            <rect x="356" y="58" width="80" height="30" rx="8"/><rect x="356" y="104" width="80" height="30" rx="8"/>
+            <rect x="356" y="150" width="80" height="30" rx="8"/><rect x="356" y="196" width="80" height="30" rx="8"/>
+          </g>
+          <g fill="#1e40af">
+            <text x="396" y="78">I</text><text x="396" y="124">ate</text><text x="396" y="170">an</text><text x="396" y="216">apple</text>
+          </g>
+        </g>
+        <g stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#mkV2)">
+          <path d="M396,88 L396,100"/><path d="M396,134 L396,146"/><path d="M396,180 L396,192"/>
+        </g>
+        <g stroke="#94a3b8" stroke-width="1.3" fill="none" marker-end="url(#mkG2)">
+          <path d="M436,73 L466,73"/><path d="M436,119 L466,119"/><path d="M436,165 L466,165"/><path d="M436,211 L466,211"/>
+        </g>
+        <text x="486" y="52" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b45309">状态全保留</text>
+        <g font-size="11" font-weight="700" text-anchor="middle">
+          <circle cx="486" cy="73" r="15" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/><text x="486" y="77" fill="#92400e">h₁</text>
+          <circle cx="486" cy="119" r="15" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/><text x="486" y="123" fill="#92400e">h₂</text>
+          <circle cx="486" cy="165" r="15" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/><text x="486" y="169" fill="#92400e">h₃</text>
+          <circle cx="486" cy="211" r="15" fill="#fffbeb" stroke="#d97706" stroke-width="1.8"/><text x="486" y="215" fill="#92400e">h₄</text>
+        </g>
+        <text x="612" y="52" text-anchor="middle" font-size="10.5" fill="#6b7280">解码器 LSTM(写)</text>
+        <g font-size="13" font-weight="600" text-anchor="middle">
+          <g fill="#fff" stroke="#fca5a5" stroke-width="2">
+            <rect x="572" y="50" width="80" height="30" rx="8"/><rect x="572" y="96" width="80" height="30" rx="8"/>
+            <rect x="572" y="142" width="80" height="30" rx="8"/><rect x="572" y="188" width="80" height="30" rx="8"/>
+            <rect x="572" y="234" width="80" height="30" rx="8"/>
+          </g>
+          <g fill="#991b1b">
+            <text x="612" y="70">我</text><text x="612" y="116">吃</text><text x="612" y="162">了</text><text x="612" y="208">一个</text><text x="612" y="254">苹果</text>
+          </g>
+        </g>
+        <g stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#mkV2)">
+          <path d="M612,80 L612,92"/><path d="M612,126 L612,138"/><path d="M612,172 L612,184"/><path d="M612,218 L612,230"/>
+        </g>
+        <g stroke="#94a3b8" stroke-width="0.8" fill="none" opacity="0.15">
+          <path d="M572,65 L501,73"/><path d="M572,65 L501,119"/><path d="M572,65 L501,165"/><path d="M572,65 L501,211"/>
+          <path d="M572,111 L501,73"/><path d="M572,111 L501,119"/><path d="M572,111 L501,165"/><path d="M572,111 L501,211"/>
+          <path d="M572,157 L501,73"/><path d="M572,157 L501,119"/><path d="M572,157 L501,165"/><path d="M572,157 L501,211"/>
+          <path d="M572,203 L501,73"/><path d="M572,203 L501,119"/><path d="M572,203 L501,165"/><path d="M572,203 L501,211"/>
+        </g>
+        <g stroke="#d97706" fill="none">
+          <path d="M572,249 Q528,180 504,80" stroke-width="1" opacity="0.4"/>
+          <path d="M572,249 Q534,186 504,122" stroke-width="1.4" opacity="0.55"/>
+          <path d="M572,249 Q536,205 504,164" stroke-width="1.4" opacity="0.55"/>
+          <path d="M572,249 Q538,232 504,210" stroke-width="3.4" opacity="0.95"/>
+        </g>
+        <g font-size="9.5" font-weight="700" fill="#b45309">
+          <text x="512" y="72">2%</text><text x="512" y="118">5%</text><text x="512" y="164">5%</text><text x="512" y="210">88%</text>
+        </g>
+        <path d="M497,219 L566,74" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 3" fill="none" opacity="0.8" marker-end="url(#mkG2)"/>
+        <text x="552" y="144" font-size="9" fill="#64748b">初始化</text>
+        <text x="612" y="282" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309">c₅(只画『苹果』这一步)</text>
+        <text x="510" y="300" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">信息出口:改前 1 张固定便签 → 改后每步现配一份 c<sub>t</sub></text>
+
+        <text x="340" y="336" text-anchor="middle" font-size="10" fill="#6b7280">图例:紫箭头 = LSTM 串行链 · 橙线 = attention(粗细 = 权重) · 虚线 = 固定向量退役,只剩开场初始化</text>
+      </svg>
+      <div class="fig-cap">
+        <span class="cl"><b>两条 LSTM 链前后一模一样</b>——变的不是零件,是"读完后信息怎么交出来"。</span>
+        <span class="cl"><b>改前</b>:全部状态汇总成 1 个固定向量,所有箭头穿过同一点;</span>
+        <span class="cl"><b>改后</b>:每个位置的 h 全部保留,每写一个词现场"算分 → softmax → 加权求和"现配一份 c<sub>t</sub>。</span>
+        <span class="cl">右图只画『苹果』一步:88% 压在 apple 上——与上面演示同一组数。</span>
+      </div>
+    </div>
+    <div class="memwrap">
+      <h4>★ "每步现配"到底怎么实现:结构只多一路,内容每步重算</h4>
+      <p style="margin:0">
+        <span class="cl">常见误解:attention 只是给解码器多接了一路输入。<b>结构上对,但救命的点不在这。</b></span>
+        <span class="cl"><b>改前</b>:那一路(固定 c)5 步喂的是<b>同一个向量</b>,一个字节不变。</span>
+        <span class="cl"><b>改后</b>:每步喂的是<b>当场新算的向量</b>——写『我』是 c₁,写『苹果』是 c₅,内容完全不同。</span>
+      </p>
+      <p style="margin-bottom:0">每写一个词之前,解码器拿<b>自己当前的状态 s</b> 当"问的人",做三个动作(= 本卡开头三步表的逐步版):</p>
+      <p style="margin:4px 0 0">
+        <span class="cl"><b>算分</b>:s 分别对 h₁~h₄ 算相关度(共 4 次,算法见下一节)。</span>
+        <span class="cl"><b>softmax</b>:4 个分数压成和为 1 的配比。</span>
+        <span class="cl"><b>加权求和</b>:c = 配比₁·h₁ + 配比₂·h₂ + 配比₃·h₃ + 配比₄·h₄。</span>
+      </p>
+      <table style="margin-top:10px">
+        <tr><th>正在写</th><th>算出的配比(h₁ / h₂ / h₃ / h₄)</th><th>现配的 c 主要装着</th></tr>
+        <tr><td><b>我</b></td><td class="num">92% / 4% / 2% / 2%</td><td>几乎都是 h₁(I)</td></tr>
+        <tr><td><b>吃</b></td><td class="num">25% / 65% / 2% / 8%</td><td>主要是 h₂(ate)</td></tr>
+        <tr><td><b>苹果</b></td><td class="num">2% / 5% / 5% / 88%</td><td>主要是 h₄(apple)</td></tr>
+      </table>
+      <p class="dim" style="margin-top:8px">
+        <span class="cl">为什么配比每步不同?因为<b>问的人变了</b>:解码器每写一词,s 更新一次。</span>
+        <span class="cl">写到第 5 步,s 里已是"我 吃 了 一个都写完、该写名词了"——自然与 h₄ 最匹配。原料 h 没动,<b>问题每步换,配方每步换</b>。</span>
+      </p>
+      <pre class="codeblk">h₁~h₄ = 编码器读原句         // 只跑一次,之后摆桌上不动
+s = 解码器初始状态; y = 起始符
+循环,直到写出结束符:
+    分数 = 拿 s 分别对 h₁~h₄ 算相关度
+    配比 = softmax(分数)
+    c   = Σ 配比ᵢ·hᵢ           // "现配"就这一行
+    y,s = 解码器走一步(y,s,c)   // c 就是那路多出来的输入
+    输出 y</pre>
+      <div class="callout amber"><b>"现配" ≠ 每步重读原句</b>:编码器全程只跑一次;每步新增的只有 4 次算分 + 1 次 softmax + 加权求和,很轻。
+        原料算一次存着、每步只重新组合——和第 4 幕 GPT 的缓存复用是同一个省法。</div>
+      <p class="dim" style="margin:0">钉到第 4 幕:这里"拿 s 问 h"就是 Q 问 K,h 本身就是 V——2014 年这张图上,已经是一颗完整的 attention。</p>
+    </div>
+    <div class="memwrap">
+      <h4>★ 算分用的是点积吗:两个版本,认得是同一件事就行</h4>
+      <p style="margin:0">
+        <span class="cl"><b>可以是,但今天主流是"点积再除个系数";2014 年那张图用的反而不是纯点积。</b></span>
+        <span class="cl">三个动作里,softmax 和加权求和从没变过,变的只有"算分"这一件。</span>
+      </p>
+      <table style="margin-top:10px">
+        <tr><th style="width:96px"></th><th>2014 原版:加性 attention</th><th>2017 起:缩放点积(Transformer)</th></tr>
+        <tr><td><b>怎么算</b></td>
+          <td>score = vᵀ tanh(W<sub>s</sub>·s + W<sub>h</sub>·h)<br>
+            <span class="dim">s、h 各乘一个学出的矩阵 → 相加 → tanh 压弯 → 投影成一个数</span></td>
+          <td><b>score = Q·K / √d<sub>k</sub></b><br>
+            <span class="dim">d<sub>k</sub> = 向量维度(论文里 64,所以除以 8)</span></td></tr>
+        <tr><td><b>相关度从哪来</b></td>
+          <td>"什么叫相关"由小网络自己学出来</td>
+          <td>点积 = |a||b|cosθ:方向越一致分越大;训练让该匹配的 Q、K 往相近方向长</td></tr>
+        <tr><td><b>为什么后来换它</b></td>
+          <td>每对词都要过一遍小网络,贵</td>
+          <td>点积就是矩阵乘法,GPU 一把梭;效果不输,于是成标准</td></tr>
+      </table>
+      <p style="margin:10px 0 0">
+        <span class="cl"><b>迷你例子</b>:s=(1,0) 时,h₁=(0.9,0.1) → 点积 0.9;h₂=(0,1) → 0;h₃=(-1,0) → -1。softmax 后,0.9 那个自然拿大头。</span>
+        <span class="cl"><b>为什么除以 √d<sub>k</sub></b>:维度越高,点积天然越大;softmax 吃到大数会<b>饱和</b>——输出挤成 0 和 1,梯度几乎消失,学不动。除一下,把分数按回温和区间。</span>
+        <span class="cl">第 4 幕拆机图里"问 Q → 算分 K"那一步,干的就是缩放点积。</span>
+      </p>
+    </div>
+    <h4>记号表(第 3 幕用到的每个符号,一个不多)</h4>
+    <table>
+      <tr><th style="width:96px">h<sub>i</sub></th>
+        <td>编码器读完第 i 个英文词后的<b>内部状态</b>(一串数,如 512 个)。h₁~h₄ = I / ate / an / apple 各自读完后的记忆,<b>每词一份,不共享</b></td></tr>
+      <tr><th>c<sub>t</sub></th>
+        <td><b>上下文向量</b>(c = context,t = 写到第几个词):第③步加权求和的产物,<b>原料固定为那几个 h,每步只变配比</b>。
+          如写『苹果』:c₅ = 0.02·h₁ + 0.05·h₂ + 0.05·h₃ + 0.88·h₄ ≈ 九成是 apple;用完即弃,下一步重新现配</td></tr>
+      <tr><th>c(左图旧)</th>
+        <td>纯 Seq2Seq 的固定向量:整句 1 份,读完定死——与 c<sub>t</sub> 的区别就是病②</td></tr>
+      <tr><th>s</th>
+        <td>解码器<b>当前的状态</b>(一串数):每写一个词更新一次,是算配比的"问的人"(用法见上面"现配"一节;其内部细节本幕黑箱)</td></tr>
+      <tr><th>2%/5%/5%/88%</th>
+        <td>那一步 softmax 的输出(权重),按顺序对应 h₁~h₄。配比由 s 对 h 算分而来,算法见上面"点积"一节</td></tr>
+    </table>
+    <table>
+      <tr><th>硬数据</th><td class="num">Bahdanau 2014 同任务:<b style="color:#dc2626">17.7</b> → <b style="color:#059669">26.8 BLEU</b>(+9);长句不再掉分,漏斗拔掉了</td></tr>
+      <tr><th>意外之喜</th><td>上面那张权重图,恰好就是 SMT 时代要单独建模的<b>词对齐</b>——attention 自己学会了,白送</td></tr>
+      <tr><th>最大遗产</th><td>算相关性 → softmax → 加权求和 = <b>Q/K/V,Transformer 原样继承——今天大模型的发动机</b></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= Transformer + GPT ================= -->
+<section id="trf">
+  <div class="sec-head"><span class="sec-no">第 4 幕</span><h2>Transformer 与 GPT:扔掉递归,拼规模</h2></div>
+  <p class="lead">2017 年,Google 论文"Attention Is All You Need"。标题是字面意思:其余都不要了。</p>
+
+  <div class="card">
+    <h3>self-attention:把"问原句"改成"问自己"</h3>
+    <p>RNN 时代,是<b>解码器</b>回头问<b>原句</b>。Transformer 把问题换成:<b>句子里每个词,直接问全句(包括自己)</b>——
+      所以叫 self-attention(自注意力)。Q、K、V 全部来自同一句话。
+      下面两张并排的结构对比图,把这句话画出来——注意两边高亮的是<b>同一个词『苹果』</b>:</p>
+    <div class="fig">
+      <svg id="cmpSvg" viewBox="0 0 680 352" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="mkP" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/></marker>
+          <marker id="mkA" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker>
+        </defs>
+        <line x1="340" y1="10" x2="340" y2="268" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <line x1="283" y1="244" x2="487" y2="244" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 4"/>
+        <text x="385" y="236" text-anchor="middle" font-size="10" fill="#94a3b8">同一个『苹果』</text>
+
+        <text x="165" y="20" text-anchor="middle" font-size="13.5" font-weight="700" fill="#7c3aed">① RNN 时代的 attention(2014)</text>
+        <text x="85" y="44" text-anchor="middle" font-size="11" fill="#6b7280">原句 · 编码器(LSTM 链)</text>
+        <text x="255" y="44" text-anchor="middle" font-size="11" fill="#6b7280">译文 · 解码器(LSTM 链)</text>
+
+        <g stroke="#cbd5e1" stroke-width="0.9" fill="none" opacity="0.45">
+          <path d="M 229 68 Q 170 70 111 72"/><path d="M 229 68 Q 170 92 111 116"/><path d="M 229 68 Q 170 114 111 160"/><path d="M 229 68 Q 170 136 111 204"/>
+          <path d="M 229 112 Q 170 92 111 72"/><path d="M 229 112 Q 170 114 111 116"/><path d="M 229 112 Q 170 136 111 160"/><path d="M 229 112 Q 170 158 111 204"/>
+          <path d="M 229 156 Q 170 114 111 72"/><path d="M 229 156 Q 170 136 111 116"/><path d="M 229 156 Q 170 158 111 160"/><path d="M 229 156 Q 170 180 111 204"/>
+          <path d="M 229 200 Q 170 136 111 72"/><path d="M 229 200 Q 170 158 111 116"/><path d="M 229 200 Q 170 180 111 160"/><path d="M 229 200 Q 170 202 111 204"/>
+        </g>
+        <g stroke="#8b5cf6" stroke-width="1.8" fill="none" marker-end="url(#mkP)">
+          <path d="M 85 86 L 85 101"/><path d="M 85 130 L 85 145"/><path d="M 85 174 L 85 189"/>
+          <path d="M 255 82 L 255 97"/><path d="M 255 126 L 255 141"/><path d="M 255 170 L 255 185"/><path d="M 255 214 L 255 229"/>
+        </g>
+        <g stroke="#d97706" fill="none" marker-end="url(#mkA)">
+          <path d="M 229 244 Q 168 158 111 72" stroke-width="1.4" opacity="0.6"/>
+          <path d="M 229 244 Q 168 180 111 116" stroke-width="1.8" opacity="0.75"/>
+          <path d="M 229 244 Q 168 202 111 160" stroke-width="1.8" opacity="0.75"/>
+          <path d="M 229 244 Q 168 224 111 204" stroke-width="3.6" opacity="0.95"/>
+        </g>
+        <g font-size="13" font-weight="700" text-anchor="middle">
+          <g fill="#fff" stroke="#93c5fd" stroke-width="2">
+            <rect x="59" y="60" width="52" height="24" rx="7"/><rect x="59" y="104" width="52" height="24" rx="7"/>
+            <rect x="59" y="148" width="52" height="24" rx="7"/><rect x="59" y="192" width="52" height="24" rx="7"/>
+          </g>
+          <g fill="#1e40af">
+            <text x="85" y="76">I</text><text x="85" y="120">ate</text><text x="85" y="164">an</text><text x="85" y="208">apple</text>
+          </g>
+          <g fill="#fff" stroke="#fca5a5" stroke-width="2">
+            <rect x="229" y="56" width="52" height="24" rx="7"/><rect x="229" y="100" width="52" height="24" rx="7"/>
+            <rect x="229" y="144" width="52" height="24" rx="7"/><rect x="229" y="188" width="52" height="24" rx="7"/>
+          </g>
+          <rect x="229" y="232" width="52" height="24" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+          <g fill="#991b1b">
+            <text x="255" y="72">我</text><text x="255" y="116">吃</text><text x="255" y="160">了</text><text x="255" y="204">一个</text>
+          </g>
+          <text x="255" y="248" fill="#92400e">苹果</text>
+        </g>
+        <g font-size="10.5" font-weight="700" fill="#b45309">
+          <text x="117" y="66">2%</text><text x="117" y="110">5%</text><text x="117" y="154">5%</text><text x="117" y="198">88%</text>
+        </g>
+        <text x="165" y="288" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">问:解码器(正在写的译文)→ 答:原句【跨句】</text>
+        <text x="165" y="306" text-anchor="middle" font-size="11" fill="#6b7280">Q 在译文侧;K、V 在原句侧</text>
+        <text x="165" y="324" text-anchor="middle" font-size="11" fill="#6b7280">两条链还在:仍要一步步读、一步步写(不能并行)</text>
+
+        <text x="515" y="20" text-anchor="middle" font-size="13.5" font-weight="700" fill="#b45309">② Transformer 的 self-attention(2017)</text>
+        <text x="515" y="44" text-anchor="middle" font-size="11" fill="#6b7280">同一句话:既是问的人,也是被问的</text>
+
+        <g stroke="#cbd5e1" stroke-width="1" fill="none" opacity="0.45">
+          <path d="M 489 68 Q 475 90 489 112"/><path d="M 489 112 Q 475 134 489 156"/><path d="M 489 156 Q 475 178 489 200"/>
+          <path d="M 541 68 Q 589 112 541 156"/><path d="M 541 68 Q 602 134 541 200"/><path d="M 541 68 Q 615 156 541 244"/>
+          <path d="M 541 112 Q 589 156 541 200"/><path d="M 541 112 Q 602 178 541 244"/><path d="M 541 156 Q 589 200 541 244"/><path d="M 541 200 Q 576 222 541 244"/>
+        </g>
+        <g stroke="#d97706" fill="none" opacity="0.9" marker-end="url(#mkA)">
+          <path d="M 489 240 Q 448 154 489 68" stroke-width="2.2"/>
+          <path d="M 489 240 Q 452 176 489 112" stroke-width="2.4"/>
+          <path d="M 489 240 Q 456 198 489 156" stroke-width="2"/>
+          <path d="M 489 240 Q 460 220 489 200" stroke-width="2.6"/>
+        </g>
+        <path d="M 489 250 C 468 248, 468 266, 489 262" stroke="#d97706" stroke-width="2.8" fill="none" opacity="0.95" marker-end="url(#mkA)"/>
+        <g font-size="13" font-weight="700" text-anchor="middle">
+          <g fill="#fff" stroke="#fcd34d" stroke-width="2">
+            <rect x="489" y="56" width="52" height="24" rx="7"/><rect x="489" y="100" width="52" height="24" rx="7"/>
+            <rect x="489" y="144" width="52" height="24" rx="7"/><rect x="489" y="188" width="52" height="24" rx="7"/>
+          </g>
+          <rect x="489" y="232" width="52" height="24" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+          <g fill="#92400e">
+            <text x="515" y="72">我</text><text x="515" y="116">吃</text><text x="515" y="160">了</text><text x="515" y="204">一个</text><text x="515" y="248">苹果</text>
+          </g>
+        </g>
+        <g font-size="10" font-weight="700" fill="#b45309" text-anchor="end">
+          <text x="474" y="61">0.10</text><text x="474" y="105">0.12</text><text x="474" y="149">0.08</text><text x="474" y="193">0.15</text>
+          <text x="462" y="259">自己 0.55</text>
+        </g>
+        <text x="515" y="288" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">问:句中每个词 → 答:同一句话【句内,含自己】</text>
+        <text x="515" y="306" text-anchor="middle" font-size="11" fill="#6b7280">Q、K、V 全部来自这一句(所以叫 self)</text>
+        <text x="515" y="324" text-anchor="middle" font-size="11" fill="#6b7280">链条全部消失:整句同时算,任意两词 1 步直达</text>
+        <text x="515" y="344" text-anchor="middle" font-size="10" fill="#94a3b8">※ 图里只画了"新东西"。原句没退场,见下图</text>
+      </svg>
+      <div class="fig-cap">
+        <span class="cl">同一个『苹果』,两种问法:</span>
+        <span class="cl"><b>左图</b>——它是译文里的词,回头问<b>另一句话</b>(原句),权重就是上一节演示里那组 2%/5%/5%/88%;</span>
+        <span class="cl"><b>右图</b>——它是句中的词,直接问<b>自己这句话</b>,包括它自己(左侧自环 0.55,权重为示意值)。</span>
+        <span class="cl">图例:紫色箭头 = RNN 链条(串行传递);橙色线 =『苹果』发出的 attention,粗细≈权重;灰细线 = 其他位置的同款连线。</span>
+      </div>
+    </div>
+    <div class="memwrap">
+      <h4>▶ 动画:原句在整台 Transformer 里的旅程(点「播放」)</h4>
+      <div class="tg-ctrl">
+        <button class="btn-main" id="tfPlay">▶ 播放</button>
+        <button class="btn-main" id="tfPrev" style="background:#fff;color:#475569;border-color:var(--line)">◂ 上一步</button>
+        <button class="btn-main" id="tfNext" style="background:#fff;color:#b45309;border-color:var(--amber)">下一步 ▸</button>
+        <button class="btn-ghost" id="tfReset">↺ 重置</button>
+      </div>
+      <div class="tf-stage">
+        <div class="tf-cap" id="tfCap">上面右图只画了"新东西"。这台整机里,原句走三段旅程——点「播放」亲眼看。</div>
+        <div class="tf-legend"><span><span class="sw a"></span>弧线与横线 = attention 零件(橙 = 正在工作的那一颗)</span><span><span class="sw s"></span>盒子·层叠·走线 = Transformer 的机身结构(不是 attention)</span></div>
+        <div class="tf-cols">
+          <div class="tf-col tf-enc" id="tfEnc">
+            <div class="tf-h">编码器 · 读原句<span class="sub">问全句(双向,整句同时算)</span></div>
+            <div class="tf-row" id="tfEncRow"></div>
+            <div class="tf-arc" id="tfEncArc"></div>
+            <div class="tf-lab" id="tfEncLab"></div>
+          </div>
+          <div class="tf-col tf-mid" id="tfMid">
+            <div class="tf-h" style="margin:0">原句<br>表示</div>
+            <div class="tf-vs" id="tfVs"></div>
+          </div>
+          <div class="tf-col tf-dec" id="tfDec">
+            <div class="tf-h">解码器 · 写译文<span class="sub">每层两问:先问已写的,再回头问原句</span></div>
+            <div class="tf-row" id="tfDecRow"></div>
+            <div class="tf-arc" id="tfDecArc"></div>
+            <div class="tf-cross" id="tfCross"></div>
+            <div class="tf-lab" id="tfDecLab"></div>
+          </div>
+        </div>
+        <div class="tf-gpt" id="tfGpt">
+          <span class="tf-gptlab">结局(2018):两家各拆走一半——</span>
+          <div class="tf-gptbox" id="tfGptEnc">编码器:BERT 只要这一半(只会读)</div>
+          <span class="sc">✂</span>
+          <div class="tf-gptbox on" id="tfGptDec">解码器:GPT 只要这一半(只会写)</div>
+        </div>
+      </div>
+      <div class="fig-cap" style="margin-top:8px">
+        <span class="cl"><b>左列</b>:原句在编码器里句内互问——蓝词间灰弧,双向、整句同时算(对比上一图左侧那条单向串行紫链)。</span>
+        <span class="cl"><b>中间那格</b>:每词产出一格向量,h₁~h₄ 摆进去,全程保留。</span>
+        <span class="cl"><b>右列</b>:解码器写每个词前做两件事。</span>
+        <span class="cl">· <b>橙弧</b> = 问自己已写出的译文(遮罩:只许看左边);</span>
+        <span class="cl">· <b>横线 + c 小框</b> = 回头向中间那格取料,配出 c₁~c₅,现配现弃(= 第 3 幕 Bahdanau 的 attention;6 层解码器每层各问一次)。</span>
+        <span class="cl"><b>结局</b>:真正扔掉原句的是 GPT——编码器一切走,cross 线没处可挂,生成只剩问自己已写出的前缀。</span>
+      </div>
+    </div>
+    <div class="memwrap">
+      <h4>★ 拆机图:哪块是 attention,哪块是 Transformer?</h4>
+      <p style="margin:0">上面动画里橙色弧线到处出现,容易看晕——到底哪块算 attention、哪块算 Transformer 的结构?
+        把整机摆上桌,拧开螺丝,分三层看:</p>
+      <div class="anat">
+        <div class="anat-p" style="flex:1.55">
+          <div class="anat-t">整机 = Transformer<span class="sub">一台完整翻译机,两半各 6 层</span></div>
+          <div class="anat-mac">
+            <div class="anat-half">
+              <div class="anat-half-t enc">编码器 ×6 层</div>
+              <div class="anat-layers">
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+              </div>
+            </div>
+            <div class="anat-x">⇄<span>cross</span></div>
+            <div class="anat-half">
+              <div class="anat-half-t dec">解码器 ×6 层</div>
+              <div class="anat-layers">
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+                <div class="anat-layer"><span class="anat-seg a"></span><span class="anat-seg a"></span><span class="anat-seg f"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="anat-note">每层里橙色小块 = attention,灰块 = FFN——<b>一眼看:整机大半不是橙色</b></div>
+        </div>
+        <div class="anat-zoom">放大<br>解码器<br>任意 1 层 ▶</div>
+        <div class="anat-p" style="flex:1.1">
+          <div class="anat-t">解码器的任意 1 层<span class="sub">3 个零件槽 + 螺丝</span></div>
+          <div class="anat-slots">
+            <div class="anat-slot a">遮罩 attention · 问自己</div>
+            <div class="anat-slot a">cross-attention · 问原句</div>
+            <div class="anat-slot f">FFN(黑盒)</div>
+          </div>
+          <div class="anat-screw">每个槽后还跟 1 组螺丝:残差 + 归一化(稳流件,也不是 attention)</div>
+        </div>
+        <div class="anat-zoom">再放大<br>任意 1 颗<br>橙色零件 ▶</div>
+        <div class="anat-p hot" style="flex:1">
+          <div class="anat-t" style="color:#b45309">1 颗 attention</div>
+          <div class="anat-mech">问 Q → 算分 K<br>→ softmax → 加权取 V</div>
+          <div class="anat-same">= 第 3 幕学过的同一个动作<br>全机 18 颗,颗颗相同</div>
+        </div>
+      </div>
+      <p style="margin:10px 0 0">
+        <span class="cl"><b>这张拆机图和上面动画是同一台机器</b>:动画看「运转」——把 6 层压成 1 层、把每个零件拆成动作演给你看;拆机图看「构造」——按真实层数摆好。</span>
+        <span class="cl">逐条对上:</span>
+      </p>
+      <table style="margin-top:6px">
+        <tr><th>上面动画里看到的</th><th>这张拆机图里对应的</th><th>是 attention 吗</th></tr>
+        <tr><td>左列蓝词之间的弧(句内互问)</td><td>左半编码器,每层那 1 个橙块</td><td>是 · 自注意力</td></tr>
+        <tr><td>右列橙弧(问已写的译文)</td><td>右半解码器,每层的第 1 个橙块</td><td>是 · 遮罩自注意力</td></tr>
+        <tr><td>右列横线 + c 小框(回头取中间那格)</td><td>右半解码器,每层的第 2 个橙块</td><td>是 · cross-attention</td></tr>
+        <tr><td>中间那格 h₁~h₄(全程摊着)</td><td>左半 6 层跑完的产物</td><td>否 · 是产物,不是零件</td></tr>
+        <tr><td>动画没演出来的</td><td>灰块 FFN、螺丝、×6 的层叠</td><td>否 · 是结构</td></tr>
+      </table>
+      <div class="callout amber" style="margin-top:10px"><b>只有橙色零件叫 attention;</b>层数、两半分工、FFN、cross 走线、螺丝——这些全是 <b>Transformer 的结构</b>。
+        二者不对立,是<b>发动机与汽车</b>:「汽车的核心是发动机」✓,「汽车就是发动机」✗。
+        论文标题《Attention Is All You Need》的准确读法:这台机器的<b>发动机只用 attention 一种</b>(RNN 旧发动机扔掉)——车轮、车架、方向盘一样不少。</div>
+      <table style="margin-top:10px">
+        <tr><th>同一颗零件,3 个岗位</th><th>谁问(Q)</th><th>问谁(K/V)</th><th>装在哪</th></tr>
+        <tr><td><b>编码器自注意力</b></td><td>原句每个词</td><td>同一原句(全体,含自己)</td><td>编码器每层 1 颗 ×6</td></tr>
+        <tr><td><b>遮罩自注意力</b></td><td>译文每个词</td><td>已写出的译文(不许看右边)</td><td>解码器每层 1 颗 ×6</td></tr>
+        <tr><td><b>cross-attention</b></td><td>译文每个词</td><td>原句表示 h<sub>1</sub>~h<sub>4</sub></td><td>解码器每层 1 颗 ×6</td></tr>
+      </table>
+      <p class="dim" style="margin-top:8px">
+        <span class="cl">参数账:一颗 attention ≈ 105 万参数(4 个 512×512 矩阵),一颗 FFN ≈ 210 万。</span>
+        <span class="cl">整机 18 颗 attention + 12 颗 FFN——attention 的槽位占 18/30,参数只占约四成。</span>
+        <span class="cl"><b>名字给了它,是因为没它不行,不是因为它块头大。</b></span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>验收:换上新零件,RNN 的两个死穴治好了吗</h3>
+    <p>
+      <span class="cl">上一节讲完了 self-attention 这颗零件:<b>是什么</b>(问法对比图)、<b>装在哪</b>(拆机图)。</span>
+      <span class="cl">这一节验收疗效:第 2 幕确诊 RNN 有两个死穴(①不能并行 ②长句失忆)——换上新零件,真治好了吗?</span>
+    </p>
+    <h4>验收死穴 2(长句失忆):第 1 个词到句尾,要走几步?</h4>
+    <div class="fig">
+      <svg id="pairSvg" viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="fig-cap">
+        <span class="cl">每对词之间都有一条直通线。</span>
+        <span class="cl"><b>任意两词的信息路径:RNN 要沿着链条走 5 步(边走边漏),self-attention 1 步直达</b>——死穴 2 消失。</span>
+      </div>
+    </div>
+    <h4>验收死穴 1(不能并行):没有递归,整句同时算</h4>
+    <div class="par-lab">Transformer:整句所有词同时算(所有灯一起亮)</div>
+    <div class="cellsrow" id="parCells"></div>
+    <p class="dim" style="margin-top:10px">小代价:递归天然自带先后顺序,扔掉后要补一个<b>位置编码</b>——给每个位置发一个编号向量,让模型知道谁先谁后。细节可黑箱。</p>
+    <div class="callout amber"><b>"规模时代"的物理前提就是这两格动画</b>:2017 年前是模型喂不饱硬件,之后反过来——想更大,就更大。GPU 并行 + 1 步直达,缺一个都到不了 1750 亿参数。</div>
+  </div>
+
+  <div class="card">
+    <h3>先把"一半"钉死:GPT 与 BERT,一台机器切成的两半</h3>
+    <p>"路线公式"那句话压缩了三件事,拆开看。2017 年的 Transformer 本身是台<b>完整翻译机</b>:
+      结构与第 3 幕的 Seq2Seq 同构——一半专职<b>读</b>(编码器),一半专职<b>写</b>(解码器),论文里各 6 层。
+      2018 年,两家公司<b>各切了一半</b>回家,配上不同的自造训练任务:</p>
+    <table>
+      <tr><th style="width:92px"></th><th>读的一半:编码器</th><th>写的一半:解码器</th></tr>
+      <tr><td><b>谁切走的</b></td><td>Google → <b>BERT</b>(2018.10)</td><td>OpenAI → <b>GPT</b>(2018.6)</td></tr>
+      <tr><td><b>自造的任务</b></td><td>完形填空:挖掉约 15% 的词,猜洞里是什么</td><td>猜下一词:看完左边一串,猜接着写什么</td></tr>
+      <tr><td><b>看句子方式</b></td><td><b>双向</b>:左右一起看(句子是现成成品)</td><td><b>单向</b>:只许看左边(未来还没写出来)</td></tr>
+      <tr><td><b>练出的能力</b></td><td>理解强、生成弱</td><td>生成强,是今天大模型的直系祖先</td></tr>
+      <tr><td><b>硬数据</b></td><td class="num">base 12 层 / 1.1 亿参数,刷新 11 项理解任务纪录</td><td class="num">GPT-1 12 层 / 1.17 亿参数</td></tr>
+    </table>
+    <p class="dim">两家起点几乎同大(1.1 亿 vs 1.17 亿),路线却相反——2018 年因此常被叫作"两半分家年"。</p>
+    <h4>为什么任务和"那一半"必须咬合(病根剖析)</h4>
+    <ul class="anat-why">
+      <li><b>写是时间动作</b>:写第 3 个词时,第 4 个词还不存在——"只许看左边"不是谁定的规矩,是处境本身。
+        训练"猜下一词"时若允许偷看右边,答案就摆在眼前,模型只会学会"抄邻居",训练报废。
+        所以这个任务<b>只能装在写的那一半里</b>——那半自带一道"因果遮罩",把右边挡死。</li>
+      <li><b>读是拿成品</b>:整句话已在手上,挖个洞、左右一起看,理解能练到最强——填空任务<b>只有读的那半装得下</b>(它没有遮罩)。
+        但 BERT 从没练过从头写句子,训练里它只做"填洞"、一次一个——这就是"理解强、生成弱"的病根。</li>
+      <li><b>两家都不需要人工标注</b>:答案藏在语料自身里(下一个词 / 被挖的词),这叫<b>自监督</b>——
+        和第 1 幕 word2vec"从共现统计里白拿语义"是同一门手艺的放大版。</li>
+    </ul>
+    <h4>▶ 亲眼看两种"视野":同一句话,GPT 与 BERT 各能看到什么</h4>
+    <div class="mk-mode">
+      <button class="mk-btn on" id="mkGpt">GPT:猜下一词</button>
+      <button class="mk-btn bert" id="mkBert">BERT:完形填空</button>
+    </div>
+    <div class="mk-row" id="mkRow"></div>
+    <div class="mk-read" id="mkRead"></div>
+    <p class="mk-note">点任意词挪动位置。蓝框 = 此刻可见;灰框 = 被遮罩挡住;黄框 = 要猜的词。
+      对比:GPT 的可见范围永远只有左边一截;BERT 挖洞之后其余<b>全部可见</b>——"单向 / 双向"的全部含义就在这几格框的颜色里。</p>
+  </div>
+
+  <div class="card">
+    <h3>GPT:拿走写的那一半,然后无脑放大</h3>
+    <p>有了上面的铺垫,路线公式能读通了:<b>GPT = Transformer 的解码器一半 + 海量文本上猜下一词</b>。
+      (BERT 那一支拿编码器一半做填空,理解强、生成弱,后来主要活在搜索与检索里;今天的对话大模型全是 GPT 这一支的后代。)</p>
+    <div class="memwrap">
+      <h4>▶ 动画:一条序列过一摞层——GPT 怎么读 prompt、怎么续写</h4>
+      <div class="tg-ctrl">
+        <button class="btn-main" id="gpPlay">▶ 播放</button>
+        <button class="btn-main" id="gpPrev" style="background:#fff;color:#475569;border-color:var(--line)">◂ 上一步</button>
+        <button class="btn-main" id="gpNext" style="background:#fff;color:#b45309;border-color:var(--amber)">下一步 ▸</button>
+        <button class="btn-ghost" id="gpReset">↺ 重置</button>
+      </div>
+      <div class="gp-stage">
+        <div class="gp-cap" id="gpCap"></div>
+        <div class="gp-lrow" id="gpRowL12">
+          <div class="gp-rlab">第 12 层<span class="sub">读 L11 理解版</span></div>
+          <div class="gp-body"><div class="gp-cells" id="gpCellsL12"></div><div class="gp-arc" id="gpArcL12"></div></div>
+        </div>
+        <div class="gp-lrow gp-dotsrow" id="gpDots">
+          <div class="gp-rlab">⋯</div>
+          <div class="gp-dotslab">第 3~11 层:同一动作重复(读上一层 → 问左边 → 消化 → 翻页)</div>
+        </div>
+        <div class="gp-lrow" id="gpRowL2">
+          <div class="gp-rlab">第 2 层<span class="sub">读 L1 理解版</span></div>
+          <div class="gp-body"><div class="gp-cells" id="gpCellsL2"></div><div class="gp-arc" id="gpArcL2"></div></div>
+        </div>
+        <div class="gp-lrow" id="gpRowL1">
+          <div class="gp-rlab">第 1 层<span class="sub">读词典版</span></div>
+          <div class="gp-body"><div class="gp-cells" id="gpCellsL1"></div><div class="gp-arc" id="gpArcL1"></div></div>
+        </div>
+        <div class="gp-lrow" id="gpRowL0">
+          <div class="gp-rlab">查表<span class="sub">第 0 步 · 词典版</span></div>
+          <div class="gp-body"><div class="gp-cells" id="gpCellsL0"></div></div>
+        </div>
+        <div class="gp-out">
+          <span class="gp-outlab">末位向量 → Softmax →</span>
+          <span class="gp-ochip blank" id="gpO1">北</span>
+          <span class="gp-ochip blank" id="gpO2">京</span>
+        </div>
+      </div>
+      <div class="fig-cap" style="margin-top:8px">
+        <span class="cl">图例:灰 = 词典版 / 缓存(✓) · 蓝 = 理解版 · 橙弧 = 正在问左边 · 发光橙块 = 末位的整段理解。</span>
+        <span class="cl"><b>"理解"不是编码之后另加的一步</b>——查表只发词典版,这摞层本身就是"理解"这个动词。</span>
+        <span class="cl"><b>每层三条规矩</b>:全体同时问左边(并行,不等谁) · 只读上一层快照(不读本层新结果) · 问完全层同时翻页。</span>
+        <span class="cl"><b>续写为什么省</b>:左边各层表示早已算好,且只读左边、与新词无关——缓存复用,只有新词自己跑全程。</span>
+        <span class="cl"><b>读与写同一套动作</b>:这就是"GPT 只有解码器一半"的实际含义——编码器不是被删,是被合并进同一条序列。</span>
+      </div>
+    </div>
+    <div class="gpt-chart">
+      <div class="g-row"><div class="g-name">GPT-1<br><span class="dim" style="font-size:11px">2018</span></div>
+        <div class="g-track"><div class="g-bar g1">1.17 亿</div></div></div>
+      <div class="g-row"><div class="g-name">GPT-2<br><span class="dim" style="font-size:11px">2019</span></div>
+        <div class="g-track"><div class="g-bar g2">15 亿</div></div></div>
+      <div class="g-row"><div class="g-name">GPT-3<br><span class="dim" style="font-size:11px">2020</span></div>
+        <div class="g-track"><div class="g-bar g3">1750 亿(参数 = 可调旋钮总数)</div></div></div>
+      <p class="g-note">横条按<b>对数刻度</b>画:每前进一格 = ×10。约两年放大 <b>1500 倍</b>,跨 3 个数量级。</p>
+      <p class="g-sliver">若按线性比例画,GPT-1 的条只有 <span class="sliver"></span> 这么宽(约 0.07%)——对数刻度就是为了让"差三个数量级的东西能画在同一张图里"。</p>
+    </div>
+    <p>GPT 系列验证了两件事:</p>
+    <table>
+      <tr><td class="num" style="width:36px">①</td><td><b>预训练范式成立</b>:先在海量文本上猜下一词学"接话",再拿去干活(先 GPT-1 微调,后 GPT-3 连微调都不用,提示里给几个例子就照做)</td></tr>
+      <tr><td class="num">②</td><td><b>规模 = 能力</b>:同一架构,只放大,就持续变强。今天所有对话大模型都是它的后代</td></tr>
+    </table>
+    <div class="memwrap">
+      <h4>★ 概念题:为什么"猜下一词"能逼出语法、事实和推理</h4>
+      <div class="callout amber" style="margin-top:0"><b>核心答案</b>:文本里的"下一个词"本身就是被语法、事实和因果规律决定的——想持续猜准,没有别的捷径,只能把生成文本的这些规律学进参数里。<b>能力是这场考试逼出来的,不是谁单独教的。</b></div>
+      <p style="margin:0">
+        <span class="cl">训练只看一件事:猜得准不准,不管内部怎么做到。</span>
+        <span class="cl">背常见搭配能拿一部分分,但句子是无限的——要在没见过的句子上也猜准,就得掌握<b>造句子的规律本身</b>。</span>
+        <span class="cl">词类搭配老猜错 → 不得不学<b>语法</b>;事实性下文老猜错 → 不得不把<b>事实</b>存进参数;因果算术老猜错 → 不得不学<b>推理</b>。</span>
+      </p>
+      <p style="margin:10px 0 0">
+        <span class="cl"><b>一个例句钉死</b>:「因为连续下了三天大雨,所以今年的河水比往年___」→ 要猜出"高 / 涨":</span>
+        <span class="cl">· 知道"比往年"后面该接形容词 = <b>语法</b>;</span>
+        <span class="cl">· 知道下雨会让河水上涨 = <b>事实与常识</b>;</span>
+        <span class="cl">· 把"连续三天大雨"推出"今年水量更多" = <b>推理</b>。</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>★ 概念题:基座 vs 对话——为什么必须加"对齐"这一关</h3>
+    <p>2022 年的 InstructGPT / ChatGPT 补的就是这一课。核心答案:<b>基座模型只会"续写文本",RLHF 模型学会"回答人"</b>——预训练给它能力,对齐把能力对准人的意图。</p>
+    <p>同一句「北京有什么好玩的景点?」,两者的行为:</p>
+    <table>
+      <tr><th style="width:92px"></th><th>基座模型(只做过预训练)</th><th>对话模型(预训练 + RLHF 对齐)</th></tr>
+      <tr><td><b>它看到什么</b></td><td>一段文本的开头,要接着写最像语料的内容</td><td>用户发来的指令,需要给出回答</td></tr>
+      <tr><td><b>可能怎么接</b></td><td>问题接龙("…?上海有什么好玩的景点?")、论坛帖、FAQ——有时恰好回答了,但形式不可控</td><td>直接给清单:故宫、长城(八达岭)、颐和园、天坛……配一两句介绍</td></tr>
+      <tr><td><b>何时停</b></td><td>不知道"答完该停",会一直往下编</td><td>答完就停,等你追问;语气像助手</td></tr>
+    </table>
+    <p style="margin:10px 0 0">
+      <span class="cl"><b>为什么必须对齐</b>:预训练的目标是"像互联网文本",而互联网里既有好回答,也有跑题、争吵、废话——"像文本" ≠ "有用、诚实、可控"。</span>
+      <span class="cl"><b>能力 ≠ 行为</b>:"知道答案"和"以人想要的方式给出答案"是两回事;对齐不改它"会不会",改它"怎么用"(指令遵循、对话格式、分寸与边界)。</span>
+      <span class="cl"><b>RLHF 白话</b>(人类反馈强化学习):先让人写示范回答,再让人给几个回答排序,用这些人类偏好把模型往"人更喜欢"的方向调。</span>
+    </p>
+    <div class="callout amber"><b>一句话:预训练解决"懂",对齐解决"听指挥"。</b>对齐是产品化的必要一步——把"文库续写器"变成"助手";能力再强,不对齐也不等于可用。</div>
+  </div>
+</section>
+
+<!-- ================= 阅读策略 ================= -->
+<section id="strategy">
+  <div class="sec-head"><span class="sec-no">方法</span><h2>回到教材:五堵承重墙 + 黑箱清单</h2></div>
+  <p class="lead">"承重墙"= 必须真懂的核心;"历史砖"= 只需一句话带过的旧技术。这是我自己起的代号,用来分配你的注意力。</p>
+  <div class="card">
+    <h3>五堵承重墙(教材读到时,停下来弄懂再走)</h3>
+    <div class="walls">
+      <div class="wall"><b>① embedding</b>词 = 查表拿向量。所有模型的第一层。</div>
+      <div class="wall"><b>② RNN 两大死穴</b>不能并行、长距遗忘。不用懂 RNN 内部,知道这两个病就行。</div>
+      <div class="wall"><b>③ attention</b>算相关性 → softmax → 加权取信息。</div>
+      <div class="wall"><b>④ self-attention + 并行</b>Transformer 为什么能做大。</div>
+      <div class="wall"><b>⑤ 下一词预测 + 预训练</b>GPT 靠什么学会一切。</div>
+    </div>
+    <h4>历史砖黑箱清单(只记"它解决了什么",坚决不点开内部)</h4>
+    <div class="bricks">
+      <span class="brick">NNLM 网络结构</span><span class="brick">CBOW / skip-gram 区别</span><span class="brick">负采样推导</span>
+      <span class="brick">LSTM 门控公式</span><span class="brick">SMT 组件</span><span class="brick">BLEU 公式</span><span class="brick">位置编码细节</span>
+    </div>
+    <h4>遇到新名词的三步法</h4>
+    <ol class="steps">
+      <li>先判断:承重墙,还是历史砖?</li>
+      <li>历史砖 → 只记一句话("它解决了前一棒的什么问题"),不查内部,继续读。</li>
+      <li>承重墙 → 停下来,画图或跑代码(本页两个 ▶ 就是给你跑的),弄懂再走。</li>
+    </ol>
+  </div>
+
+  <div class="card" style="text-align:center">
+    <h3>整段历史,压缩成一句话</h3>
+    <div class="chainline">
+      <span class="ck k1">词 → 向量<br><span class="dim" style="font-weight:400">2013 word2vec</span></span><span class="ca">→</span>
+      <span class="ck k2">变长句子进出<br><span class="dim" style="font-weight:400">2014 Seq2Seq</span></span><span class="ca">→</span>
+      <span class="ck k3">该看哪里自己学<br><span class="dim" style="font-weight:400">2014 attention</span></span><span class="ca">→</span>
+      <span class="ck k4">扔掉递归<br><span class="dim" style="font-weight:400">2017 Transformer</span></span><span class="ca">→</span>
+      <span class="ck k5">放大 1500 倍<br><span class="dim" style="font-weight:400">2018-20 GPT</span></span>
+    </div>
+    <p class="dim" style="margin-top:12px">每个箭头都是"上一棒留下的问题,下一棒解决"。读的时候把每个名词还原成它回答的问题,这条链就不会再缠住你。</p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <div class="card">
+    <b>硬数据出处</b>(口径与配套 Python 实验 word_vector_demo.py / softmax_crossentropy.py 一致)
+    <div class="srcs">
+      <span class="src">Bengio et al. 2003(NNLM)</span>
+      <span class="src">Mikolov et al. 2013(word2vec,十亿词 CPU 一天)</span>
+      <span class="src">Sutskever et al. 2014(Seq2Seq,34.8 BLEU)</span>
+      <span class="src">Bahdanau et al. 2014(attention,17.7 → 26.8 BLEU)</span>
+      <span class="src">Vaswani et al. 2017(Transformer)</span>
+      <span class="src">Brown et al. 2020(GPT-3,1750 亿参数)</span>
+      <span class="src">Hochreiter & Schmidhuber 1997(LSTM)</span>
+      <span class="src">Firth 1957(分布假设)</span>
+    </div>
+    <p style="margin-top:10px">注:attention 演示中的权重为手写示意值,用于展示机制;词向量演示是真实训练,每个数都是现场算出来的。本页无任何外部依赖,可离线打开。</p>
+  </div>
+</div></footer>
+
+<script>
+/* ================================================================
+   工具
+================================================================ */
+function $(id){ return document.getElementById(id); }
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+function gauss(prng){ let u=0,v=0; while(u===0)u=prng(); while(v===0)v=prng();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const SIGMOID = x => 1/(1+Math.exp(-x));
+
+/* ================================================================
+   地基:one-hot 条 与 分布式条
+================================================================ */
+(function(){
+  const oh = $('ohStrip');
+  for(let i=0;i<16;i++){
+    const d=document.createElement('div');
+    d.className = i===3 ? 'cell c1' : 'cell c0';
+    d.textContent = i===3 ? '1' : '0';
+    oh.appendChild(d);
+  }
+  const vals=[0.21,-0.44,0.87,0.05,-0.32,0.61,-0.12,0.38];
+  const dn = $('denseStrip');
+  vals.forEach(v=>{ const d=document.createElement('div');
+    d.className='cell cd'; d.textContent=v.toFixed(2); dn.appendChild(d); });
+})();
+
+/* ================================================================
+   词向量交互实验(skip-gram + 负采样,与 Python 版同算法)
+================================================================ */
+(function(){
+  const corpus=[
+    ["小猫","追","皮球"],["小狗","追","皮球"],
+    ["小猫","玩","皮球"],["小狗","玩","皮球"],
+    ["小猫","吃","鱼"],["小狗","吃","骨头"],
+    ["火箭","发射","升空"],["火箭","进入","太空"],
+    ["医生","在","医院"]
+  ];
+  const vocab=[...new Set(corpus.flat())].sort();
+  const idx={}; vocab.forEach((w,i)=>idx[w]=i);
+  const V=vocab.length, K=6, TOTAL=600, DIM=2;
+  const pairs=[];
+  corpus.forEach(s=>{ for(let i=0;i<s.length-1;i++){
+    pairs.push([idx[s[i]],idx[s[i+1]]]); pairs.push([idx[s[i+1]],idx[s[i]]]); }});
+  const statPairs=[["小猫","小狗"],["鱼","骨头"],["小猫","皮球"],["小猫","火箭"]];
+
+  const canvas=$('wvCanvas'), ctx=canvas.getContext('2d');
+  let W, Wout, epoch=0, running=false, rafId=null, prng=null, hoverW=-1;
+  let before=[0,0,0,0];
+
+  function fit(){
+    const r=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    canvas.width=Math.round(r.width*dpr); canvas.height=Math.round(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); return r;
+  }
+  function init(seed){
+    prng=mulberry32(seed);
+    W=[]; Wout=[];
+    for(let i=0;i<V;i++){ W.push([gauss(prng)*0.6,gauss(prng)*0.6]);
+                          Wout.push([gauss(prng)*0.6,gauss(prng)*0.6]); }
+    epoch=0; before=statPairs.map(([a,b])=>cosSim(idx[a],idx[b]));
+    for(let i=0;i<4;i++) $('s'+i).textContent=fmt(before[i]);
+    updateMeta(); anatDraw();
+  }
+  function centered(){
+    const mx=W.reduce((s,v)=>s+v[0],0)/V, my=W.reduce((s,v)=>s+v[1],0)/V;
+    return W.map(v=>[v[0]-mx, v[1]-my]);
+  }
+  function cosSim(a,b){
+    const C=centered(), va=C[a], vb=C[b];
+    const d=va[0]*vb[0]+va[1]*vb[1];
+    const n=Math.hypot(va[0],va[1])*Math.hypot(vb[0],vb[1])||1e-12;
+    return d/n;
+  }
+  const fmt = v => (v>=0?'+':'')+v.toFixed(3);
+  function updatePair(c,o,negs,lr){
+    const h=W[c];
+    let g=1-SIGMOID(h[0]*Wout[o][0]+h[1]*Wout[o][1]);
+    let gh=[g*Wout[o][0], g*Wout[o][1]];
+    Wout[o][0]+=lr*g*h[0]; Wout[o][1]+=lr*g*h[1];
+    negs.forEach(n=>{
+      g=-SIGMOID(h[0]*Wout[n][0]+h[1]*Wout[n][1]);
+      gh[0]+=g*Wout[n][0]; gh[1]+=g*Wout[n][1];
+      Wout[n][0]+=lr*g*h[0]; Wout[n][1]+=lr*g*h[1];
+    });
+    W[c][0]+=lr*gh[0]; W[c][1]+=lr*gh[1];
+  }
+  function epochStep(){
+    const lr = 0.005 + (0.08-0.005)*(1-epoch/TOTAL);
+    const order=[...pairs.keys()];
+    for(let i=order.length-1;i>0;i--){ const j=Math.floor(prng()*(i+1));
+      [order[i],order[j]]=[order[j],order[i]]; }
+    for(const p of order){
+      const c=pairs[p][0], o=pairs[p][1];
+      const negs=[];
+      while(negs.length<K){ const n=Math.floor(prng()*V);
+        if(n!==c&&n!==o&&!negs.includes(n)) negs.push(n); }
+      updatePair(c,o,negs,lr);
+    }
+    epoch++;
+  }
+  function render(){
+    const r=fit(), cw=r.width, ch=r.height;
+    ctx.clearRect(0,0,cw,ch);
+    const C=centered();
+    let maxAbs=0.5; C.forEach(v=>{ maxAbs=Math.max(maxAbs,Math.abs(v[0]),Math.abs(v[1])); });
+    const sc=Math.min(cw,ch)/2-52;
+    const px=v=>cw/2+v/maxAbs*sc, py=v=>ch/2-v/maxAbs*sc;
+    const pos=C.map(v=>[px(v[0]),py(v[1])]);
+    // 悬停高亮:连线到前 3 近邻
+    if(hoverW>=0){
+      const nb=neighbors(hoverW,3);
+      ctx.font='11.5px sans-serif';
+      nb.forEach(([j,s])=>{
+        ctx.strokeStyle='rgba(217,119,6,.75)'; ctx.lineWidth=1.5+s*2;
+        ctx.beginPath(); ctx.moveTo(pos[hoverW][0],pos[hoverW][1]);
+        ctx.lineTo(pos[j][0],pos[j][1]); ctx.stroke();
+        const mx2=(pos[hoverW][0]+pos[j][0])/2, my2=(pos[hoverW][1]+pos[j][1])/2;
+        ctx.fillStyle='#b45309'; ctx.textAlign='center';
+        ctx.fillText(fmt(s), mx2, my2-6);
+      });
+    }
+    pos.forEach((p,i)=>{
+      const hot = i===hoverW || (hoverW>=0 && neighbors(hoverW,3).some(n=>n[0]===i));
+      ctx.beginPath(); ctx.arc(p[0],p[1],hot?6:4.5,0,7);
+      ctx.fillStyle = hot?'#d97706':'#2563eb'; ctx.fill();
+      if(i===hoverW){ ctx.strokeStyle='rgba(217,119,6,.3)'; ctx.lineWidth=8;
+        ctx.beginPath(); ctx.arc(p[0],p[1],9,0,7); ctx.stroke(); }
+      ctx.font=(i===hoverW?'bold 13px':'12.5px')+' sans-serif';
+      ctx.fillStyle= hot?'#92400e':'#1f2937'; ctx.textAlign='center';
+      ctx.fillText(vocab[i], p[0], p[1]-10);
+    });
+  }
+  function neighbors(i,topN){
+    const arr=vocab.map((_,j)=>[j, j===i?-2:cosSim(i,j)]);
+    arr.sort((a,b)=>b[1]-a[1]);
+    return arr.slice(1,1+topN);
+  }
+  function updateStats(){
+    statPairs.forEach(([a,b],k)=>{
+      const now=cosSim(idx[a],idx[b]);
+      const el=$('s'+k);
+      el.textContent=fmt(now);
+      el.className='num '+(now>before[k]?'up':'down');
+    });
+    const n1=neighbors(idx['小猫'],3), n2=neighbors(idx['火箭'],3);
+    $('nbLine').innerHTML=
+      '离 <b>小猫</b> 最近:'+n1.map(([j,s])=>vocab[j]+'('+fmt(s)+')').join(' ')+'<br>'+
+      '离 <b>火箭</b> 最近:'+n2.map(([j,s])=>vocab[j]+'('+fmt(s)+')').join(' ');
+    updateMeta();
+  }
+  function updateMeta(){
+    $('wvMeta').textContent='第 '+epoch+' 轮 / 共 '+TOTAL+' 轮';
+  }
+  function loop(){
+    if(!running) return;
+    for(let k=0;k<3 && epoch<TOTAL;k++) epochStep();
+    render(); updateStats();
+    if(epoch>=TOTAL){ running=false; $('wvRun').textContent='▶ 重新播放'; return; }
+    rafId=requestAnimationFrame(loop);
+  }
+  $('wvRun').addEventListener('click',()=>{
+    if(epoch>=TOTAL){ init(Math.floor(Math.random()*1e9)); }
+    running=!running;
+    $('wvRun').textContent = running ? '⏸ 暂停' : '▶ 继续';
+    if(running) loop();
+  });
+  $('wvStep').addEventListener('click',()=>{
+    for(let k=0;k<10 && epoch<TOTAL;k++) epochStep();
+    render(); updateStats();
+  });
+  $('wvReset').addEventListener('click',()=>{
+    running=false; $('wvRun').textContent='▶ 开始训练';
+    init(Math.floor(Math.random()*1e9)); render(); updateStats();
+  });
+  canvas.addEventListener('mousemove',e=>{
+    const r=canvas.getBoundingClientRect(), C=centered();
+    let maxAbs=0.5; C.forEach(v=>{ maxAbs=Math.max(maxAbs,Math.abs(v[0]),Math.abs(v[1])); });
+    const sc=Math.min(r.width,r.height)/2-52;
+    let best=-1,bd=26;
+    C.forEach((v,i)=>{
+      const dx=r.width/2+v[0]/maxAbs*sc-e.offsetX;
+      const dy=r.height/2-v[1]/maxAbs*sc-e.offsetY;
+      const d=Math.hypot(dx,dy); if(d<bd){bd=d;best=i;}
+    });
+    if(best!==hoverW){ hoverW=best; render(); }
+    canvas.style.cursor = best>=0?'pointer':'default';
+  });
+  canvas.addEventListener('mouseleave',()=>{ hoverW=-1; render(); });
+  window.addEventListener('resize',()=>render());
+
+  /* —— 一轮训练解剖:与画布共享同一个真实模型 —— */
+  const anatPos=$('anatPos'), anatNegs=$('anatNegs'), anatSum=$('anatSum');
+  let anatBatch=null;
+
+  function scoreOf(a,b){
+    const h=W[a];
+    return SIGMOID(h[0]*Wout[b][0]+h[1]*Wout[b][1]);
+  }
+  function anatRow(words,score,goal,force){
+    const err=goal-score;
+    const row=document.createElement('div');
+    row.className='an-row '+(goal===1?'pos':'neg');
+    row.innerHTML='<span class="an-words">'+words+'</span>'+
+      '<span class="an-bar"><i style="width:'+(score*100).toFixed(1)+'%"></i></span>'+
+      '<span class="an-score">'+score.toFixed(2)+'</span>'+
+      '<span class="an-mark">目标 '+goal+'</span>'+
+      '<span class="an-err">误差 '+(err>=0?'+':'')+err.toFixed(2)+'</span>'+
+      '<span class="an-force '+(err>=0?'pull':'push')+'">'+force+'</span>';
+    return row;
+  }
+  function renderAnat(){
+    if(!anatBatch) return;
+    const {c,o,negs}=anatBatch;
+    anatPos.innerHTML=''; anatNegs.innerHTML='';
+    anatPos.appendChild(anatRow(vocab[c]+' · '+vocab[o], scoreOf(c,o), 1, '拉近'));
+    negs.forEach(n=>{
+      anatNegs.appendChild(anatRow(vocab[c]+' · '+vocab[n], scoreOf(c,n), 0, '推远'));
+    });
+  }
+  function anatDraw(){
+    const p=pairs[Math.floor(prng()*pairs.length)];
+    const negs=[];
+    while(negs.length<K){
+      const n=Math.floor(prng()*V);
+      if(n!==p[0]&&n!==p[1]&&!negs.includes(n)) negs.push(n);
+    }
+    anatBatch={c:p[0], o:p[1], negs};
+    renderAnat();
+    const pos=scoreOf(anatBatch.c,anatBatch.o);
+    const negScores=negs.map(n=>scoreOf(anatBatch.c,n));
+    const negMax=Math.max(...negScores);
+    const negAvg=negScores.reduce((s,v)=>s+v,0)/negScores.length;
+    if(pos>negMax+0.03){
+      anatSum.innerHTML='真邻居「'+vocab[anatBatch.c]+' · '+vocab[anatBatch.o]+'」分数 <b>'+pos.toFixed(2)+
+        '</b>,已稳定高于全部 6 个反例(反例最高 '+negMax.toFixed(2)+
+        ')——模型学会了这对关系。点「🎲 再抽一对」看别的词对,或「▶ 执行微调」再走一步。';
+    } else {
+      anatSum.innerHTML='真邻居「'+vocab[anatBatch.c]+' · '+vocab[anatBatch.o]+'」分数 '+pos.toFixed(2)+
+        ',反例最高 '+negMax.toFixed(2)+'、平均 '+negAvg.toFixed(2)+
+        '——差距还不悬殊。要么模型还没学会(训练早期就是这样),要么抽到的反例里恰好有语义相近的词'+
+        '(比如同为火箭家族的词,它们本来就该像)。点「🎲 再抽一对」或「▶ 执行微调」继续观察。';
+    }
+  }
+  $('anatDraw').addEventListener('click',anatDraw);
+  $('anatApply').addEventListener('click',()=>{
+    if(!anatBatch) return;
+    const {c,o,negs}=anatBatch;
+    const before=scoreOf(c,o);
+    const lr=0.005+(0.08-0.005)*(1-epoch/TOTAL);
+    updatePair(c,o,negs,lr);
+    render(); updateStats(); renderAnat();
+    const after=scoreOf(c,o);
+    anatSum.innerHTML='这一步执行完:正样本分数 '+before.toFixed(2)+' → <b>'+after.toFixed(2)+
+      '</b>。画布上「'+vocab[c]+'」只挪了肉眼难辨的一小段——单步影响就这么小;'+
+      '600 轮 ≈ 15 万次这样的微调,才攒出你看到的抱团。';
+  });
+
+  init(3);
+  render(); updateStats();
+})();
+
+/* ================================================================
+   RNN:传话游戏(词链 + 记忆衰减 + self-attention 对比)
+================================================================ */
+(function(){
+  const words=['我','昨天','在','公园','看见','一只','橘色','小猫'];
+  const KEEP=0.7;
+  const wrap=$('tgWrap'), inner=$('tgInner'), tg=$('tg'), arc=$('tgArc'),
+        readout=$('tgReadout'), btnPlay=$('tgPlay'), btnReset=$('tgReset'), btnSa=$('tgSa');
+  const NS='http://www.w3.org/2000/svg';
+  let revealed=false, saMode=false, hoverK=-1, timers=[];
+
+  const cols=[], mems=[], boxes=[], waters=[], pcts=[], arrs=[null];
+  words.forEach((w,i)=>{
+    if(i>0){ const a=document.createElement('div'); a.className='tg-arr'; a.textContent='→';
+             tg.appendChild(a); arrs.push(a); }
+    const col=document.createElement('div'); col.className='tg-col';
+    const mem=document.createElement('div');  mem.className='tg-mem'; mem.textContent='我';
+    const box=document.createElement('div');  box.className='tg-box'; box.textContent=w;
+    const tube=document.createElement('div'); tube.className='tg-tube';
+    const water=document.createElement('div'); water.className='tg-water'; tube.appendChild(water);
+    const pct=document.createElement('div');  pct.className='tg-pct'; pct.textContent='—';
+    col.append(mem, box, tube, pct); tg.appendChild(col);
+    cols.push(col); mems.push(mem); boxes.push(box); waters.push(water); pcts.push(pct);
+    col.addEventListener('mouseenter',()=>{ hoverK=i; render(); });
+    col.addEventListener('mouseleave',()=>{ hoverK=-1; render(); });
+  });
+
+  const remain=i=>Math.pow(KEEP,i);          // i = 从句首转手的次数
+  const pctTxt=i=>Math.round(remain(i)*100)+'%';
+
+  function revealOne(i){
+    mems[i].style.opacity=remain(i);
+    waters[i].style.height=(remain(i)*100)+'%';
+    pcts[i].textContent=pctTxt(i);
+    boxes[i].classList.add('path');
+    setTimeout(()=>boxes[i].classList.remove('path'),350);
+  }
+  function clearAll(){
+    mems.forEach(m=>m.style.opacity=0);
+    waters.forEach(w=>w.style.height=0);
+    pcts.forEach(p=>p.textContent='—');
+    revealed=false;
+  }
+
+  function drawArc(){
+    while(arc.firstChild) arc.removeChild(arc.firstChild);
+    if(!saMode) return;
+    const ir=inner.getBoundingClientRect();
+    const b1=boxes[0].getBoundingClientRect(), b8=boxes[7].getBoundingClientRect();
+    const x1=b1.left+b1.width/2-ir.left, y1=b1.top-ir.top-2;
+    const x8=b8.left+b8.width/2-ir.left, y8=b8.top-ir.top-2;
+    const p=document.createElementNS(NS,'path');
+    p.setAttribute('d','M '+x1+' '+y1+' Q '+(x1+x8)/2+' '+(y1-42)+' '+x8+' '+y8);
+    p.setAttribute('stroke','#d97706'); p.setAttribute('stroke-width','2.6');
+    p.setAttribute('fill','none'); p.setAttribute('stroke-dasharray','7 5');
+    arc.appendChild(p);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',(x1+x8)/2); t.setAttribute('y',y1-46);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12.5');
+    t.setAttribute('font-weight','700'); t.setAttribute('fill','#b45309');
+    t.textContent='self-attention:1 步直达,信息 100%';
+    arc.appendChild(t);
+  }
+
+  function render(){
+    arrs.forEach((a,k)=>{ if(!a) return;
+      a.classList.toggle('lit', !saMode && hoverK>=k);
+      a.classList.toggle('dim', saMode);
+    });
+    boxes.forEach((b,k)=>{
+      b.classList.toggle('hot', !saMode && hoverK===k);
+      b.classList.toggle('sa-hot', saMode && (k===0||k===7));
+    });
+    if(saMode){
+      readout.innerHTML='<b>self-attention 视角</b>:每个词直接看全句。「小猫」一步看到「我」——信息 100% 不漏。'+
+        '对比 RNN:7 次转手,0.7⁷ ≈ <span class="mono">8%</span>。这就是 2017 年扔掉 RNN 的理由(细节见下一节)。';
+    } else if(hoverK>=0){
+      const r=Math.round(remain(hoverK)*100);
+      if(hoverK===0){
+        readout.innerHTML='「我」就是句首本身:记忆 <span class="mono">100%</span>,它就是信息的源头。';
+      } else {
+        readout.innerHTML='读到「'+words[hoverK]+'」时,句首的「我」已经过 <b>'+hoverK+
+          ' 次转手</b>:0.7<sup>'+hoverK+'</sup> ≈ <span class="mono">'+r+'%</span>。'+
+          '它听到的「我」,全部来自前一个词「'+words[hoverK-1]+'」的转述——而那也是转述的转述。';
+      }
+    } else if(revealed){
+      readout.innerHTML='规律:剩 <span class="mono">0.7<sup>n</sup></span>(n = 转手次数)。'+
+        '第 8 个词「小猫」只剩 <span class="mono">8%</span>——这就是"长距离信息退化"。悬停任一词查看细节。';
+    } else {
+      readout.innerHTML='点「▶ 播放」看信息一词一词传下去;或直接把鼠标悬停到任一词上。';
+    }
+  }
+
+  function applyState(){
+    wrap.classList.toggle('sa', saMode);
+    btnSa.textContent = saMode ? '↩ 换回 RNN 视角' : '⚡ 换 self-attention 视角';
+    if(saMode){
+      pcts.forEach(p=>p.textContent='100%');
+    } else {
+      words.forEach((_,i)=>{
+        mems[i].style.opacity = revealed ? remain(i) : 0;
+        waters[i].style.height = revealed ? (remain(i)*100)+'%' : 0;
+        pcts[i].textContent = revealed ? pctTxt(i) : '—';
+      });
+    }
+    drawArc(); render();
+  }
+
+  btnPlay.addEventListener('click',()=>{
+    timers.forEach(clearTimeout); timers=[];
+    saMode=false;
+    clearAll(); applyState();
+    words.forEach((_,i)=>{
+      timers.push(setTimeout(()=>{
+        revealOne(i);
+        if(i===words.length-1){ revealed=true; render(); }
+      }, i*620));
+    });
+  });
+  btnReset.addEventListener('click',()=>{
+    timers.forEach(clearTimeout); timers=[];
+    saMode=false; clearAll(); applyState();
+  });
+  btnSa.addEventListener('click',()=>{
+    timers.forEach(clearTimeout); timers=[];
+    saMode=!saMode;
+    if(saMode && !revealed){
+      words.forEach((_,i)=>{ mems[i].style.opacity=remain(i);
+        waters[i].style.height=(remain(i)*100)+'%'; });
+      revealed=true;
+    }
+    applyState();
+  });
+  window.addEventListener('resize',()=>{ if(saMode) drawArc(); });
+
+  applyState();
+})();
+
+/* ================================================================
+   RNN vs Transformer:并行动画格子
+================================================================ */
+(function(){
+  const seq=$('seqCells'), par=$('parCells');
+  const lbl=['词1','词2','词3','词4','词5','词6'];
+  lbl.forEach((t,i)=>{
+    const c=document.createElement('div'); c.className='pcell seq'; c.style.setProperty('--i',i);
+    c.textContent=t; seq.appendChild(c);
+  });
+  lbl.forEach((t,i)=>{
+    const c=document.createElement('div'); c.className='pcell'; c.textContent=t; par.appendChild(c);
+  });
+})();
+
+/* ================================================================
+   Transformer:全连线图
+================================================================ */
+(function(){
+  const svg=$('pairSvg'), NS='http://www.w3.org/2000/svg';
+  const words=['小','猫','追','皮','球','。'];
+  const xs=words.map((_,i)=>70+i*108);
+  xs.forEach((x,i)=>{
+    const g=document.createElementNS(NS,'g');
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('x',x-34); r.setAttribute('y',140); r.setAttribute('width',68);
+    r.setAttribute('height',34); r.setAttribute('rx',9);
+    r.setAttribute('fill','#fff'); r.setAttribute('stroke','#fcd34d'); r.setAttribute('stroke-width','2');
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',x); t.setAttribute('y',162); t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size','15'); t.setAttribute('font-weight','700'); t.setAttribute('fill','#92400e');
+    t.textContent=words[i];
+    g.appendChild(r); g.appendChild(t); svg.appendChild(g);
+  });
+  for(let i=0;i<words.length;i++) for(let j=i+1;j<words.length;j++){
+    const p=document.createElementNS(NS,'path');
+    const x1=xs[i],x2=xs[j], h=(j-i)*13;
+    p.setAttribute('d','M '+x1+' 138 Q '+(x1+x2)/2+' '+(140-h-34)+' '+x2+' 138');
+    const from0 = (i===0);
+    p.setAttribute('stroke', from0?'#d97706':'#cbd5e1');
+    p.setAttribute('stroke-width', from0? 2.4:1.3);
+    p.setAttribute('fill','none');
+    p.setAttribute('opacity', from0? 0.9:0.75);
+    svg.appendChild(p);
+  }
+  const cap=document.createElementNS(NS,'text');
+  cap.setAttribute('x',70); cap.setAttribute('y',30);
+  cap.setAttribute('font-size','12.5'); cap.setAttribute('fill','#b45309'); cap.setAttribute('font-weight','700');
+  cap.textContent='橙色 = 第 1 个词与其余所有词 1 步直达(含最右的"。":RNN 要走 5 步)';
+  svg.appendChild(cap);
+})();
+
+/* ================================================================
+   Seq2Seq 便签动画
+================================================================ */
+(function(){
+  const COL={I:'#2563eb',ate:'#059669',an:'#7c3aed',apple:'#dc2626',in:'#d97706',
+             the:'#64748b',park:'#0d9488',yesterday:'#db2777',afternoon:'#65a30d'};
+  const MODES={
+    short:{src:['I','ate','an','apple'],
+           tgt:[['我','I'],['吃','ate'],['了','ate'],['一个','an'],['苹果','apple']],
+           end:'五条色带<b>一模一样</b>——每一步拿到的都是同一张便签(病② 一视同仁);4 个词挤 8 格,短句刚好塞下,病① 还没发作。'},
+    long:{src:['I','ate','an','apple','in','the','park','yesterday','afternoon'],
+          tgt:[['我','I'],['昨天','yesterday'],['下午','afternoon'],['在','in'],['公园','park'],['里','the'],
+               ['吃','ate'],['了','ate'],['一个','an'],['苹果','apple']],
+          end:'9 个词读入、便签只有 8 格:先来的 <b>I / ate / an / apple / in 全被挤掉</b>,对应的词只能硬写(病① 容量瓶颈);而且每步拿到的仍是同一张(病②)。句越长,漏斗越狠。'}
+  };
+  const cap=$('sqCap'),srcRow=$('sqSrc'),cellsBox=$('sqCells'),outRow=$('sqOut'),
+        cover=$('sqCover'),note=$('sqNote'),
+        btnPlay=$('sqPlay'),btnReset=$('sqReset'),btnS=$('sqShort'),btnL=$('sqLong');
+  let mode='short',cellOwner=[],outChips=[],timers=[];
+  function clearTimers(){timers.forEach(clearTimeout);timers=[]}
+  function later(ms,fn){timers.push(setTimeout(fn,ms))}
+  function build(){
+    clearTimers();
+    cellOwner=Array(8).fill(null); outChips=[];
+    srcRow.innerHTML=''; cellsBox.innerHTML=''; outRow.innerHTML='';
+    cover.classList.remove('on'); note.classList.remove('pulse');
+    MODES[mode].src.forEach(w=>{
+      const c=document.createElement('div'); c.className='chip';
+      c.innerHTML='<span class="sq-dot" style="background:'+COL[w]+'"></span>'+w;
+      srcRow.appendChild(c);
+    });
+    for(let i=0;i<8;i++){const d=document.createElement('div'); d.className='sq-cell'; cellsBox.appendChild(d)}
+    MODES[mode].tgt.forEach(p=>{
+      const c=document.createElement('div'); c.className='sq-ochip pending';
+      const w=document.createElement('span'); w.className='sq-w'; w.textContent=p[0];
+      const q=document.createElement('span'); q.className='sq-q';
+      const st=document.createElement('div'); st.className='sq-strip';
+      for(let i=0;i<8;i++) st.appendChild(document.createElement('span'));
+      c.appendChild(w); c.appendChild(q); c.appendChild(st);
+      outRow.appendChild(c); outChips.push(c);
+    });
+    cap.innerHTML='点「播放」:先编码(把原句压进便签),再解码(一个词一个词往外写)。';
+  }
+  function play(){
+    clearTimers(); build();
+    const src=MODES[mode].src,tgt=MODES[mode].tgt;
+    const srcChips=[...srcRow.children];
+    let t=200;
+    src.forEach((w,i)=>{
+      later(t,()=>{cap.innerHTML='编码:读入『<b>'+w+'</b>』→ 写进便签';
+        srcChips[i].classList.add('hot');
+        [(2*i)%8,(2*i+1)%8].forEach(k=>{cellOwner[k]=w;
+          cellsBox.children[k].style.background=COL[w]});});
+      later(t+340,()=>srcChips[i].classList.remove('hot'));
+      t+= mode==='long'?300:430;
+    });
+    later(t,()=>{cover.classList.add('on');
+      cap.innerHTML='编码结束:整句 = 这 8 格。<b>盖住原文——之后写每个词,都不许再看。</b>'});
+    t+=1150;
+    tgt.forEach((p,j)=>{
+      later(t,()=>{
+        const w=p[0],need=p[1],ok=cellOwner.indexOf(need)>=0;
+        note.classList.add('pulse');
+        later(330,()=>note.classList.remove('pulse'));
+        const chip=outChips[j];
+        chip.classList.remove('pending'); chip.classList.add(ok?'ok':'bad');
+        if(ok) chip.style.borderColor=COL[need];
+        chip.querySelector('.sq-q').textContent= ok?'':'?';
+        const spans=chip.querySelectorAll('.sq-strip span');
+        for(let k=0;k<8;k++) spans[k].style.background= cellOwner[k]?COL[cellOwner[k]]:'#eef2f7';
+        cap.innerHTML= ok
+          ? '写『<b>'+w+'</b>』:手里的信息 = 这张便签——<b>还是它,一格未变</b>'
+          : '写『<b>'+w+'</b>』:便签里『'+need+'』的颜色早被后来的词挤掉了——只能硬写 <b>?</b>';
+      });
+      t+= mode==='long'?600:780;
+    });
+    later(t,()=>{cap.innerHTML=MODES[mode].end});
+  }
+  btnPlay.addEventListener('click',play);
+  btnReset.addEventListener('click',build);
+  btnS.addEventListener('click',()=>{mode='short';btnS.classList.add('on');btnL.classList.remove('on');build()});
+  btnL.addEventListener('click',()=>{mode='long';btnL.classList.add('on');btnS.classList.remove('on');build()});
+  build();
+})();
+
+/* ================================================================
+   Transformer 整机动画(原句的旅程)
+================================================================ */
+(function(){
+  const SRC=['I','ate','an','apple'], TGT=['我','吃','了','一个','苹果'];
+  const NS='http://www.w3.org/2000/svg';
+  const cap=$('tfCap'),encRow=$('tfEncRow'),encArcBox=$('tfEncArc'),encLab=$('tfEncLab'),
+        decRow=$('tfDecRow'),decArcBox=$('tfDecArc'),decLab=$('tfDecLab'),crossBox=$('tfCross'),
+        encCol=$('tfEnc'),decCol=$('tfDec'),midCol=$('tfMid'),vsBox=$('tfVs'),
+        gptEnc=$('tfGptEnc'),gptDec=$('tfGptDec'),
+        btnP=$('tfPlay'),btnV=$('tfPrev'),btnN=$('tfNext'),btnR=$('tfReset');
+  let encChips=[],decChips=[],vChips=[],timers=[],stepIdx=-1;
+  const later=(ms,fn)=>timers.push(setTimeout(fn,ms));
+  const clearTimers=()=>{timers.forEach(clearTimeout);timers=[]};
+  function chipCenters(rowEl,boxEl){
+    const br=boxEl.getBoundingClientRect();
+    return [...rowEl.children].map(c=>{
+      const r=c.getBoundingClientRect();
+      return r.left + r.width/2 - br.left;
+    });
+  }
+  function mkArc(box,pairs,rowEl){
+    const centers=chipCenters(rowEl,box);
+    const svg=document.createElementNS(NS,'svg');
+    pairs.forEach(it=>{
+      const [i,j]=it.p, x1=centers[i], x2=centers[j];
+      const h=(j-i)*7+10;
+      const path=document.createElementNS(NS,'path');
+      path.setAttribute('d','M '+x1+' 3 Q '+(x1+x2)/2+' '+(3+h+12)+' '+x2+' 3');
+      path.setAttribute('stroke',it.hot?'#d97706':'#cbd5e1');
+      path.setAttribute('stroke-width',it.hot?2.2:1.1);
+      path.setAttribute('opacity',it.hot?0.95:0.6);
+      path.setAttribute('fill','none');
+      path.style.opacity=0;
+      svg.appendChild(path);
+    });
+    box.innerHTML=''; box.appendChild(svg);
+    return svg;
+  }
+  function build(){
+    clearTimers();
+    encRow.innerHTML=''; decRow.innerHTML=''; encArcBox.innerHTML=''; decArcBox.innerHTML='';
+    crossBox.innerHTML=''; vsBox.innerHTML=''; encChips=[]; decChips=[]; vChips=[]; stepIdx=-1;
+    encCol.className='tf-col tf-enc'; decCol.className='tf-col tf-dec'; midCol.className='tf-col tf-mid';
+    gptEnc.className='tf-gptbox'; gptDec.className='tf-gptbox on';
+    SRC.forEach(w=>{const c=document.createElement('div');c.className='tf-w';c.textContent=w;
+      encRow.appendChild(c);encChips.push(c)});
+    TGT.forEach(w=>{const c=document.createElement('div');c.className='tf-w t blank';c.textContent=w;
+      decRow.appendChild(c);decChips.push(c)});
+    SRC.forEach((w,i)=>{const v=document.createElement('div');v.className='tf-v';v.textContent='h'+'₁₂₃₄'[i];
+      vsBox.appendChild(v);vChips.push(v)});
+    const encPairs=[]; for(let i=0;i<SRC.length;i++) for(let j=i+1;j<SRC.length;j++) encPairs.push({p:[i,j]});
+    mkArc(encArcBox,encPairs,encRow);
+    const xarrow=document.createElement('div'); xarrow.className='tf-xarrow off';
+    xarrow.innerHTML='<span class="cx-t">⇠ 回头取中间那格</span><div class="ln"></div><span class="tf-cchip"></span>';
+    crossBox.appendChild(xarrow);
+    encLab.textContent=''; decLab.textContent='';
+    cap.innerHTML='这台整机里,原句走三段旅程——点「播放」自动放,或点「下一步」一格一格走。';
+    updateBtns();
+  }
+  function encArcSvg(){return encArcBox.querySelector('svg')}
+  function decStep(k){
+    decCol.classList.add('hot');
+    decChips[k].classList.remove('blank'); decChips[k].classList.add('act');
+    if(k>0){
+      const pairs=[]; for(let j=0;j<k;j++) pairs.push({p:[j,k],hot:true});
+      mkArc(decArcBox,pairs,decRow);
+      [...decArcBox.querySelectorAll('path')].forEach(p=>p.style.opacity=0.9);
+      decLab.innerHTML='<b>问自己</b> · 遮罩自注意力:只问已写出的'+k+'个词(左边)';
+    } else {
+      decArcBox.innerHTML=''; decLab.innerHTML='<b>问自己</b> · 遮罩自注意力:第 1 个词,左边还没有词';
+    }
+  }
+  function crossOn(on,k){
+    const xa=crossBox.querySelector('.tf-xarrow'); if(!xa) return;
+    xa.classList.toggle('on',on); xa.classList.toggle('off',!on);
+    if(on){xa.querySelector('.tf-cchip').textContent='c'+'₁₂₃₄₅'[k]; midCol.classList.add('hot');}
+    else midCol.classList.remove('hot');
+    encCol.classList.toggle('hot',on); encCol.classList.toggle('dim',!on&&stepIdx>2);
+  }
+  function finishWord(k){
+    decChips[k].classList.remove('act'); decChips[k].classList.add('done');
+    crossOn(false);
+  }
+  const STEPS=[
+    ()=>{encCol.classList.add('hot');
+      cap.innerHTML='<b>第①段:原句进编码器</b>——每个词直接问全句(双向弧线即将全亮 = 整句同时算,对比上一图那条单向串行的紫链)。';},
+    ()=>{[...encArcSvg().querySelectorAll('path')].forEach(p=>{p.dataset.hot='1';p.style.opacity=0.95;
+        p.setAttribute('stroke','#d97706')});
+      encChips.forEach(c=>c.classList.add('act'));
+      vChips.forEach(v=>v.classList.add('full'));
+      encLab.innerHTML='产出 4 份向量,每词一份,<b>全程保留</b>(中间那格 h₁~h₄ = 第 3 幕的 h)';},
+    ()=>{encChips.forEach(c=>{c.classList.remove('act');c.classList.add('done')});
+      encCol.classList.remove('hot'); encCol.classList.add('dim');
+      [...encArcSvg().querySelectorAll('path')].forEach(p=>{p.style.opacity=0.3;p.setAttribute('stroke','#cbd5e1')});
+      cap.innerHTML='第①段完成:原句不再是文字,而是 <b>4 份向量(一词一份,中间那格)</b>。它们全程摆在这——<b>不撤走、不合并、不改动</b>,等解码器写词时回头取。';},
+  ];
+  TGT.forEach((w,k)=>{
+    STEPS.push(()=>{
+      decStep(k);
+      cap.innerHTML = k===0
+        ? '<b>第②段·写『我』(第 1/5 个词)</b>——先问自己:左边还没有词,没对象可问(没有橙弧,正常)。点「下一步」去问原句。'
+        : '<b>第②段·写『'+w+'』(第 '+(k+1)+'/5 个词)</b>——先<b>问自己</b>已写的译文:橙弧 = 『'+w+'』向左边 '+k+' 个词发问;右边还没出生,不许看(这条禁令就叫"遮罩")。';});
+    STEPS.push(()=>{
+      crossOn(true,k);
+      cap.innerHTML='再<b>问原句</b> · <b>cross-attention</b>:写『'+w+'』正需要原句的信息来定词——"谁要谁取"发生:回头到中间那格(h₁~h₄ 亮起),给 4 份向量配比例,现配出 <b>c<sub>'+(k+1)+'</sub></b>(横线右端橙框,= 第 3 幕的 cₜ)。';});
+    STEPS.push(()=>{
+      finishWord(k);
+      cap.innerHTML='『'+w+'』写出——那份 c<sub>'+(k+1)+'</sub> <b>用完即弃</b>,下一步重新现配。'+(k<4?'点「下一步」写下一个词,同样两问。':'');});
+  });
+  STEPS.push(()=>{decCol.classList.remove('hot');
+    cap.innerHTML='<b>5 个词,两问各做了 5 次</b>(真实模型 6 层解码器,每层各再来一遍)。注意:cross 那条线<b>全程没断</b>——"问原句"没被删。';});
+  STEPS.push(()=>{gptEnc.classList.add('cut'); encCol.classList.add('cut'); midCol.classList.add('cut');
+    const xa=crossBox.querySelector('.tf-xarrow'); xa.classList.add('cut');
+    cap.innerHTML='<b>第③段(2018):GPT 把编码器切走</b>——没有编码器,cross 线没处可挂;生成时只剩问自己已写出的前缀。这就是"路线公式"的深层含义。';});
+  function updateBtns(){
+    btnN.disabled = stepIdx>=STEPS.length-1;
+    btnV.disabled = stepIdx<0;
+    btnP.disabled = false;
+    btnN.textContent = stepIdx>=STEPS.length-1 ? '✓ 已到终点' : '下一步 ▸';
+  }
+  function next(){ if(stepIdx>=STEPS.length-1) return; stepIdx++; STEPS[stepIdx](); updateBtns(); }
+  function prev(){
+    if(stepIdx<0) return;
+    clearTimers();
+    const target=stepIdx-1;
+    build();
+    for(let s=0;s<=target;s++){ stepIdx=s; STEPS[s](); }
+    stepIdx=target; updateBtns();
+  }
+  function play(){
+    clearTimers(); build(); let t=350;
+    for(let s=0;s<STEPS.length;s++){
+      later(t,next); t+= (s===1||s===2)?1600 : (STEPS.length-s<=2 ? 2200 : 1100);
+    }
+  }
+  btnP.addEventListener('click',play);
+  btnV.addEventListener('click',prev);
+  btnN.addEventListener('click',()=>{clearTimers();next();});
+  btnR.addEventListener('click',build);
+  build();
+})();
+
+/* ================================================================
+   attention 交互
+================================================================ */
+(function(){
+  const srcWords=['I','ate','an','apple'];
+  const tgtData=[
+    {w:'我',   a:[0.92,0.04,0.02,0.02]},
+    {w:'吃',   a:[0.25,0.65,0.02,0.08]},
+    {w:'了',   a:[0.05,0.80,0.10,0.05]},
+    {w:'一个', a:[0.03,0.07,0.82,0.08]},
+    {w:'苹果', a:[0.02,0.05,0.05,0.88]}
+  ];
+  const stage=$('attStage'), svg=$('attSvg'), srcRow=$('attSrc'), tgtRow=$('attTgt'), bars=$('attBars');
+  const NS='http://www.w3.org/2000/svg';
+  let cur=tgtData.length-1, srcChips=[], tgtChips=[], attOn=true;
+  const toggleBtn=$('attToggle'), modeTip=$('attModeTip');
+  toggleBtn.addEventListener('click',()=>{
+    attOn=!attOn;
+    stage.classList.toggle('off',!attOn);
+    toggleBtn.textContent = attOn ? '🙈 收走原文:模拟纯 Seq2Seq' : '👀 摊开原文:恢复 attention';
+    modeTip.innerHTML = attOn
+      ? '当前状态:<b>有 attention</b>——原文摊在桌上,写每个词都能回头看。点左边按钮把原文收走,体验 Seq2Seq 作者的处境。'
+      : '当前状态:<b>纯 Seq2Seq</b>——原文被收走,作者手里只剩那张压扁的"总印象"便签。点下面的中文词,看看换成哪个词都只能拿到同一包信息。';
+    $('attBarsTip').style.display = attOn ? '' : 'none';
+    draw();
+  });
+
+  srcWords.forEach(w=>{
+    const c=document.createElement('div'); c.className='chip';
+    c.innerHTML='<span class="wb"></span>'+w;
+    srcRow.appendChild(c); srcChips.push(c);
+  });
+  tgtData.forEach((d,i)=>{
+    const c=document.createElement('div'); c.className='chip'; c.textContent=d.w;
+    c.addEventListener('click',()=>{ cur=i; tgtChips.forEach((t,k)=>t.classList.toggle('sel',k===i)); draw(); });
+    tgtRow.appendChild(c); tgtChips.push(c);
+  });
+  tgtChips[cur].classList.add('sel');
+
+  function draw(){
+    const sr=stage.getBoundingClientRect();
+    svg.setAttribute('viewBox','0 0 '+sr.width+' '+sr.height);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    const tgt=tgtChips[cur].getBoundingClientRect();
+    const tx=tgt.left+tgt.width/2-sr.left, ty=tgt.top-sr.top;
+    if(!attOn){
+      srcChips.forEach(c=>{ c.querySelector('.wb').textContent=''; c.classList.remove('hot'); });
+      bars.innerHTML='<div class="att-flat">原文不可见。生成「'+tgtData[cur].w+
+        '」时,解码器能用的只有同一个"总印象"向量——<br>它没法知道此刻该重点看 I 还是 apple,只能靠便签里混在一起的平均信息硬猜。</div>';
+      return;
+    }
+    const att=tgtData[cur].a;
+    srcChips.forEach((c,j)=>{
+      const r=c.getBoundingClientRect();
+      const x=r.left+r.width/2-sr.left, y=r.bottom-sr.top;
+      const p=document.createElementNS(NS,'path');
+      const w=att[j], dist=Math.abs(x-tx);
+      const lift=Math.min(46, 18+dist*0.22);
+      p.setAttribute('d','M '+x+' '+y+' Q '+(x+tx)/2+' '+(y+ty)/2+' '+tx+' '+ty);
+      p.setAttribute('stroke', w>0.4?'#d97706':'#94a3b8');
+      p.setAttribute('stroke-width', 1+w*11);
+      p.setAttribute('opacity', 0.12+w*0.88);
+      p.setAttribute('fill','none');
+      svg.appendChild(p);
+      c.querySelector('.wb').textContent=Math.round(w*100)+'%';
+      c.classList.toggle('hot', w>0.4);
+    });
+    bars.innerHTML='';
+    srcWords.forEach((w,j)=>{
+      const row=document.createElement('div'); row.className='ab-row';
+      row.innerHTML='<div class="ab-word">'+w+'</div>'+
+        '<div class="ab-track"><div class="ab-bar" style="width:'+(att[j]*100)+'%"></div></div>'+
+        '<div class="ab-val">'+att[j].toFixed(2)+'</div>';
+      bars.appendChild(row);
+    });
+  }
+  window.addEventListener('resize',draw);
+  draw();
+})();
+
+/* ================================================================
+   GPT/BERT:视野遮罩演示
+================================================================ */
+(function(){
+  const words=['我','吃','了','一个','苹果'];
+  const row=$('mkRow'), read=$('mkRead'), bG=$('mkGpt'), bB=$('mkBert');
+  let mode='gpt', sel=2;
+  const chips=[];
+  words.forEach((w,i)=>{
+    const c=document.createElement('div'); c.className='mk-chip';
+    c.addEventListener('click',()=>{ sel=i; render(); });
+    row.appendChild(c); chips.push(c);
+  });
+  function render(){
+    bG.classList.toggle('on', mode==='gpt');
+    bB.classList.toggle('on', mode==='bert');
+    if(mode==='gpt'){
+      const target=sel+1;
+      chips.forEach((c,i)=>{
+        c.innerHTML = i<=sel ? words[i]
+          : (i===target ? words[i]+'<span class="lk">要猜</span>' : words[i]+'<span class="lk">挡住</span>');
+        c.className='mk-chip '+(i<=sel ? 'vis' : (i===target ? 'tgt' : 'blk'));
+      });
+      if(target>=words.length){
+        read.innerHTML='整句写完,下一步要猜的是<b>结束符</b>——连"什么时候闭嘴"也是同一个任务里学出来的。';
+      } else {
+        read.innerHTML='第 '+(sel+1)+' 步:看得见「'+words.slice(0,sel+1).join(' ')+'」→ 猜下一词<b>「'+words[target]+'」</b>。'+
+          '右边 '+(words.length-target-1)+' 个词被遮罩挡死——写的时候,它们还不存在。';
+      }
+    } else {
+      chips.forEach((c,i)=>{
+        c.innerHTML = i===sel ? '?<span class="lk">被挖掉</span>' : words[i];
+        c.className='mk-chip '+(i===sel ? 'tgt' : 'vis');
+      });
+      read.innerHTML='把「'+words[sel]+'」挖掉,剩下的<b>左右全部可见</b>——两边一起帮它猜洞里是什么。'+
+        '训练里从没让它从左到右写出一整句,所以它会填洞,不会作文:这就是"理解强、生成弱"。';
+    }
+  }
+  bG.addEventListener('click',()=>{ mode='gpt'; render(); });
+  bB.addEventListener('click',()=>{ mode='bert'; render(); });
+  render();
+})();
+
+/* ================================================================
+   GPT 动画:一条序列过一摞层(读 prompt + 续写)
+================================================================ */
+(function(){
+  const W=['中','国','的','首','都','是','北','京'], PL=6, NL=8;
+  const LAYERS=['L1','L2','L12'];
+  const NS='http://www.w3.org/2000/svg';
+  const cap=$('gpCap'), o1=$('gpO1'), o2=$('gpO2'), dots=$('gpDots'),
+        btnP=$('gpPlay'),btnV=$('gpPrev'),btnN=$('gpNext'),btnR=$('gpReset');
+  let timers=[],stepIdx=-1,wordChips=[],cellChips={};
+  const later=(ms,fn)=>timers.push(setTimeout(fn,ms));
+  const clearTimers=()=>{timers.forEach(clearTimeout);timers=[]};
+  function centers(rowEl,boxEl){
+    const br=boxEl.getBoundingClientRect();
+    return [...rowEl.children].map(c=>{const r=c.getBoundingClientRect();return r.left+r.width/2-br.left;});
+  }
+  function drawArcs(L,pairs,hot){
+    const box=$('gpArc'+L), rowEl=$('gpCells'+L);
+    const cs=centers(rowEl,box);
+    const svg=document.createElementNS(NS,'svg');
+    pairs.forEach(p=>{
+      const x1=cs[p[0]], x2=cs[p[1]], h=Math.min(15,(p[1]-p[0])*3+6);
+      const path=document.createElementNS(NS,'path');
+      path.setAttribute('d','M '+x1+' 3 Q '+(x1+x2)/2+' '+(3+h+8)+' '+x2+' 3');
+      path.setAttribute('stroke',hot?'#d97706':'#cbd5e1');
+      path.setAttribute('stroke-width',hot?1.8:1);
+      path.setAttribute('opacity',hot?0.9:0.55);
+      path.setAttribute('fill','none');
+      svg.appendChild(path);
+    });
+    box.innerHTML=''; box.appendChild(svg);
+  }
+  const leftPairs=n=>{const ps=[];for(let k=1;k<n;k++)for(let j=0;j<k;j++)ps.push([j,k]);return ps;};
+  const toNew=(k,n)=>{const ps=[];for(let j=0;j<n;j++)ps.push([j,k]);return ps;};
+  const fillLayer=(L,n)=>cellChips[L].forEach((v,i)=>{if(i<n)v.className='gp-v full';});
+  function build(){
+    clearTimers(); stepIdx=-1; wordChips=[]; cellChips={};
+    LAYERS.forEach(L=>{
+      const cd=$('gpCells'+L); cd.innerHTML=''; $('gpArc'+L).innerHTML='';
+      cellChips[L]=[];
+      W.forEach(()=>{const v=document.createElement('div');v.className='gp-v';cd.appendChild(v);cellChips[L].push(v);});
+    });
+    dots.classList.remove('hot');
+    const w0=$('gpCellsL0'); w0.innerHTML='';
+    W.forEach((w,i)=>{const c=document.createElement('div');
+      c.className='gp-w'+(i>=PL?' blank':''); c.textContent=i>=PL?'·':w;
+      w0.appendChild(c); wordChips.push(c);});
+    o1.className='gp-ochip blank'; o2.className='gp-ochip blank';
+    cap.innerHTML='一条 prompt 进来:「中国的首都是」。<b>没有编码器、没有中间那格</b>——只有这一摞层(图把 12 层压成 3 格)。末尾两格虚线 = 还没写出来的词。点「播放」自动放,或「下一步」一格一格走。';
+    updateBtns();
+  }
+  const STEPS=[
+    ()=>{wordChips.forEach((c,i)=>{if(i<PL)c.classList.add('dict')});
+      cap.innerHTML='<b>第 0 步 · 查表</b>:每个词领到一个固定向量——<b>词典释义版</b>,不分语境(「苹果」在「我吃苹果」和「苹果开发布会」里领的是同一个)。句意 ≠ 词义简单相加,所以才需要上面这摞层来"理解"。';},
+    ()=>{drawArcs('L1',leftPairs(PL),true); fillLayer('L1',PL);
+      cap.innerHTML='<b>第 1 层 · 全体同时问左边</b>:6 个词谁也不等谁,橙弧<b>同时</b>亮起(= 并行,死穴①已治好)。读的是<b>词典版快照</b>——本层算出的新结果谁都不给看;问完 + FFN 消化,全层同时翻页,升级成「1 层理解版」(蓝块)。';},
+    ()=>{drawArcs('L1',leftPairs(PL),false); drawArcs('L2',leftPairs(PL),true); fillLayer('L2',PL);
+      cap.innerHTML='<b>第 2 层 · 再问一遍</b>:这次读到的是 <b>L1 理解版</b>(不是原文,也不是本层新结果)。层越深,问出的关系越抽象——低层学搭配(「是」跟着「首都」很顺),高层学指代与整句意图(「这是在问首都」)。';},
+    ()=>{drawArcs('L2',leftPairs(PL),false); dots.classList.add('hot');
+      drawArcs('L12',leftPairs(PL),true); fillLayer('L12',PL);
+      cellChips.L12[PL-1].classList.add('fin');
+      cap.innerHTML='<b>…同一动作重复到第 12 层</b>。注意:全场只有<b>最后一个位置</b>的左边是完整 prompt——只有它看过全部。「对整段的理解」天然汇总在末位这块(发光橙块)。';},
+    ()=>{dots.classList.remove('hot'); o1.className='gp-ochip';
+      cap.innerHTML='<b>末位向量 → Softmax → 猜出『北』</b>。其余位置的理解只是副产品,干活的是末位这一份。';},
+    ()=>{drawArcs('L12',leftPairs(PL),false);
+      wordChips[PL].className='gp-w new'; wordChips[PL].textContent='北';
+      LAYERS.forEach(L=>cellChips[L].forEach((v,i)=>{if(i<PL){v.className='gp-v cache';v.textContent='✓';}}));
+      cap.innerHTML='<b>『北』追加到末尾</b>。左边 6 个词的各层表示<b>原样保留、直接复用</b>(✓ = 缓存)——它们只读左边,跟右边来了谁无关,所以完全不用重算。';},
+    ()=>{drawArcs('L1',toNew(PL,PL),true); cellChips.L1[PL].className='gp-v full';
+      cap.innerHTML='<b>只有新词『北』自己跑全程</b>:第 1 层,它读左边 6 份<b>缓存好的 L1 快照</b>(橙弧),算出自己在这一层的理解版。';},
+    ()=>{drawArcs('L1',toNew(PL,PL),false); drawArcs('L2',toNew(PL,PL),true); cellChips.L2[PL].className='gp-v full';
+      cap.innerHTML='<b>第 2 层</b>:同样,读左边缓存好的 L2 快照——左边完全没动,只有『北』这一列在往上长。';},
+    ()=>{drawArcs('L2',toNew(PL,PL),false); drawArcs('L12',toNew(PL,PL),true); cellChips.L12[PL].className='gp-v full fin';
+      o2.className='gp-ochip';
+      cap.innerHTML='<b>…到第 12 层</b>:『北』的末位向量 = 对「中国的首都是北」的理解 → Softmax → 猜出『京』。';},
+    ()=>{wordChips[PL].className='gp-w'; wordChips[NL-1].className='gp-w new'; wordChips[NL-1].textContent='京';
+      cap.innerHTML='<b>『京』再跑同一套(图略)</b>——读和写,同一摞层、同一套规则。所以 GPT 不是"删了编码器",而是<b>同一条序列上,读与写合并</b>:读 prompt 和写回答走的是完全相同的动作。';},
+  ];
+  function updateBtns(){
+    btnN.disabled = stepIdx>=STEPS.length-1;
+    btnV.disabled = stepIdx<0;
+    btnN.textContent = stepIdx>=STEPS.length-1 ? '✓ 已到终点' : '下一步 ▸';
+  }
+  function next(){ if(stepIdx>=STEPS.length-1) return; stepIdx++; STEPS[stepIdx](); updateBtns(); }
+  function prev(){
+    if(stepIdx<0) return;
+    clearTimers();
+    const target=stepIdx-1;
+    build();
+    for(let s=0;s<=target;s++){ stepIdx=s; STEPS[s](); }
+    stepIdx=target; updateBtns();
+  }
+  function play(){
+    clearTimers(); build(); let t=400;
+    for(let s=0;s<STEPS.length;s++){ later(t,next); t+=1900; }
+  }
+  btnP.addEventListener('click',play);
+  btnV.addEventListener('click',prev);
+  btnN.addEventListener('click',()=>{clearTimers();next();});
+  btnR.addEventListener('click',build);
+  build();
+})();
+</script>
+</body>
+</html>
